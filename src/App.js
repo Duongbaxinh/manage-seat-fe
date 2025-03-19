@@ -1,15 +1,9 @@
 import React, { useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import "./App.css";
 
-import Login from "./pages/Login";
-import Home from "./pages/Home";
-import Dashboard from "./pages/Dashboard";
-import FloorManagement from "./pages/FloorManagement";
-import HallManagement from "./pages/HallManagement";
-import SeatManagement from "./pages/SeatManagement";
-import ProtectedRoute from "./components/ProtectedRoute";
 import RoomManage from "./pages/RoomManage";
+import SeatManagement from "./pages/SeatManagement";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(true);
@@ -21,26 +15,11 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* <Route
-          path="/login"
-          element={
-            isLoggedIn ? (
-              <Navigate to="/" replace />
-            ) : (
-              <Login onLogin={handleLogin} />
-            )
-          }
-        /> */}
         {/* <Route path="/" element={<Login />} /> */}
-        <Route element={<ProtectedRoute onLogout={handleLogout} />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/floor-management" element={<FloorManagement />} />
-          <Route path="/hall-management" element={<HallManagement />} />
+        <Route element={""}>
           <Route path="/seat-management/:id" element={<SeatManagement />} />
           <Route path="/room-management" element={<RoomManage />} />
         </Route>
-
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

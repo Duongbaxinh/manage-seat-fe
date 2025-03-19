@@ -2,13 +2,12 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useParams } from "react-router-dom";
-import Popup from "../Component/atom/Popup";
-import RoomDiagram from "../components/RoomDiagram";
-import SeatList from "../components/SeatList";
+import Popup from "../components/atom/Popup";
+import RoomDiagram from "../components/molecules/RoomDiagram";
+import SeatList from "../components/molecules/SeatList";
 
 const SeatManagement = () => {
   const [seats, setSeats] = useState([]);
-  const [room, setRoom] = useState({});
   const [isOpen, setIsOpen] = useState(false);
   const [users, setUser] = useState([]);
   const [assign, setAssign] = useState(false);
@@ -47,26 +46,13 @@ const SeatManagement = () => {
     }
   };
 
-  const handleSeatDrop = (seatId, position, isRepositioning) => {
+  const handleSeatDrop = (seatId, position) => {
     setSeats((prevSeats) =>
-      prevSeats.map((seat) => {
-        if (seat.id === seatId) {
-          if (isRepositioning) {
-            return {
-              ...seat,
-              posX: position.x,
-              posY: position.y,
-            };
-          }
-          return {
-            ...seat,
-            status: "Assigned",
-            posX: position.x,
-            posY: position.y,
-          };
-        }
-        return seat;
-      })
+      prevSeats.map((seat) => seat.id === seatId ? {
+        ...seat,
+        posX: position.x,
+        posY: position.y,
+      } : seat)
     );
   };
 
