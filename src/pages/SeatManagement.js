@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from "react";
-import SeatList from "../components/SeatList";
-import RoomDiagram from "../components/RoomDiagram";
 import axios from "axios";
+import React, { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { useParams } from "react-router-dom";
 import Popup from "../Component/atom/Popup";
-import { useForm } from "react-hook-form";
-import { CancelIcon } from "../icons";
+import RoomDiagram from "../components/RoomDiagram";
+import SeatList from "../components/SeatList";
 
 const SeatManagement = () => {
   const [seats, setSeats] = useState([]);
+  const [room, setRoom] = useState({});
   const [isOpen, setIsOpen] = useState(false);
   const [users, setUser] = useState([]);
   const [assign, setAssign] = useState(false);
@@ -51,7 +51,6 @@ const SeatManagement = () => {
     setSeats((prevSeats) =>
       prevSeats.map((seat) => {
         if (seat.id === seatId) {
-          // If it's a repositioning, just update the position
           if (isRepositioning) {
             return {
               ...seat,
@@ -59,7 +58,6 @@ const SeatManagement = () => {
               posY: position.y,
             };
           }
-          // If it's a new assignment, update status and position
           return {
             ...seat,
             status: "Assigned",
@@ -87,13 +85,82 @@ const SeatManagement = () => {
     );
   };
 
+  const handleAddObject = (type) => {
+    const newObject = {
+      id: Date.now(),
+      name: type,
+      posX: 50,
+      posY: 50,
+      width: type === "wall" ? 200 : 100,
+      height: type === "wall" ? 20 : 100,
+      rotation: 0,
+    };
+    setObjects((prev) => [...prev, newObject]);
+  };
+
+  const handleSetPositionObject = (objectId, updates) => {
+    setObjects((prev) =>
+      prev.map((item) =>
+        item.id === objectId ? { ...item, ...updates } : item
+      )
+    );
+  };
+
+  const handleDeleteObject = (objectId) => {
+    setObjects((prev) => prev.filter((item) => item.id !== objectId));
+  };
+
+  const handleSaveDiagram = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      const diagram = {
+        roomId: id,
+        image: "https://example.com/room_image.png",
+        seats: seats.map((seat) => ({
+          seatId: seat.id,
+          posX: seat.posX,
+          posY: seat.posY,
+        })),
+        object: JSON.stringify(
+          objects.map((obj) => ({
+            id: obj.id,
+            name: obj.name,
+            posX: obj.posX,
+            posY: obj.posY,
+            width: obj.width,
+            height: obj.height,
+            rotation: obj.rotation,
+          }))
+        ),
+      };
+
+      await axios.post("http://localhost:8080/room/diagram", diagram, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // Show success message or handle response
+    } catch (error) {
+      console.error("Error saving diagram:", error);
+    }
+  };
+
   const fetchData = async (authentication) => {
     const { data } = await axios.get(
       `http://localhost:8080/seat/filter?page=0&size=10&sortBy=name&roomId=${id}`,
       authentication
     );
+    const { data: roomData } = await axios.get(
+      `http://localhost:8080/room/${id}`,
+      authentication
+    );
     setSeats(data.result.content);
+
+    console.log("--------", JSON.parse(roomData.result.object));
+    setObjects(JSON.parse(roomData.result.object));
   };
+
   const fetchDataUser = async (authentication) => {
     const { data } = await axios.get(
       `http://localhost:8080/room/users/${id}`,
@@ -101,42 +168,6 @@ const SeatManagement = () => {
     );
 
     setUser(data.result);
-  };
-
-  const handleSaveDiagram = async () => {
-    const diagram = {
-      roomId: id,
-      image: "https://example.com/updated_room_image.png",
-      seats: seats.map((seat) => ({
-        seatId: seat.id,
-        posX: seat.posX,
-        posY: seat.posY,
-      })),
-      object: "Updated meeting room layout",
-    };
-    await axios.post("http://localhost:8080/room/diagram", diagram, {
-      headers: {
-        Authorization: localStorage.getItem("accessToken"),
-      },
-    });
-    fetchData();
-  };
-
-  const handleAddObject = async (key) => {
-    setObjects((prev) => [
-      ...prev,
-      { id: prev.length + key, name: key, posX: 0, posY: 0, color: "yellow" },
-    ]);
-  };
-
-  const handleSetPositionObject = (idObject, position) => {
-    setObjects((prev) =>
-      prev.map((item) =>
-        item.id === idObject
-          ? { ...item, posX: position.x, posY: position.y }
-          : item
-      )
-    );
   };
 
   useEffect(() => {
@@ -149,9 +180,56 @@ const SeatManagement = () => {
     fetchData(authentication);
     fetchDataUser(authentication);
   }, []);
-  console.log("object", objects);
+
+  console.log("check roomsss", objects);
   return (
     <div className="max-w-screen-2xl mx-auto px-4 py-6">
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Room Layout</h1>
+          <div className="flex gap-4">
+            <button
+              onClick={() => handleAddObject("table")}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            >
+              Add Table
+            </button>
+            <button
+              onClick={() => handleAddObject("wall")}
+              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+            >
+              Add Wall
+            </button>
+            <button
+              onClick={handleSaveDiagram}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+            >
+              Save Layout
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-6">
+          <div className="col-span-3 bg-white rounded-lg border h-[600px]">
+            <RoomDiagram
+              seats={seats}
+              objects={objects}
+              onSeatDrop={handleSeatDrop}
+              onSetPositionObject={handleSetPositionObject}
+              onDeleteObject={handleDeleteObject}
+              onUnassign={handleUnassignSeat}
+            />
+          </div>
+          <div className="col-span-1">
+            <SeatList
+              seats={seats}
+              onUnassignDrop={handleUnassignSeat}
+              onAdd={() => setIsOpen(true)}
+            />
+          </div>
+        </div>
+      </div>
+
       <Popup isOpen={isOpen} onClose={() => setIsOpen(false)}>
         <div className="min-w-[500px]">
           <h1 className="text-xl font-semibold mb-4">Add new Seat</h1>
@@ -192,9 +270,9 @@ const SeatManagement = () => {
                 <option value="TEMPORARY">Temporary</option>
                 <option value="PERMANENT">Permanent</option>
               </select>
-              {errors.type && (
+              {errors.typeSeat && (
                 <span className="text-red-500 text-sm">
-                  {errors.type.message}
+                  {errors.typeSeat.message}
                 </span>
               )}
             </div>
@@ -220,9 +298,9 @@ const SeatManagement = () => {
                     </option>
                   ))}
                 </select>
-                {errors.type && (
+                {errors.userId && (
                   <span className="text-red-500 text-sm">
-                    {errors.type.message}
+                    {errors.userId.message}
                   </span>
                 )}
               </div>
@@ -248,48 +326,6 @@ const SeatManagement = () => {
           </form>
         </div>
       </Popup>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Seat Management</h1>
-        <div className="flex gap-5 items-center">
-          <div
-            onClick={() => {
-              handleAddObject("table");
-            }}
-            className="w-[100px] h-[30px] text-white font-bold bg-yellow-300 flex items-center justify-center rounded-md"
-          >
-            Table
-          </div>
-
-          <div
-            onClick={() => {
-              handleAddObject("wall");
-            }}
-            className="w-[100px] h-[30px] text-white font-bold bg-gray-400 flex items-center justify-center rounded-md"
-          >
-            Wall
-          </div>
-        </div>
-      </div>
-
-      <div className="flex gap-6 h-[calc(100vh-160px)]">
-        <div className="w-80 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <SeatList
-            seats={seats}
-            onUnassignDrop={handleUnassignSeat}
-            onAdd={() => setIsOpen(true)}
-          />
-        </div>
-        <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <button onClick={() => handleSaveDiagram()}>Save Diagram</button>
-          <RoomDiagram
-            objects={objects}
-            seats={seats}
-            onSetPositionObject={handleSetPositionObject}
-            onSeatDrop={handleSeatDrop}
-            onUnassign={handleUnassignSeat}
-          />
-        </div>
-      </div>
     </div>
   );
 };
