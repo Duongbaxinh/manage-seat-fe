@@ -1,14 +1,12 @@
 import axios from "axios";
 import React, { useState, useEffect } from "react";
-const token =
-  "eyJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJ5b3VyLWFwcCIsInN1YiI6ImFkbWluIiwiZXhwIjoxNzQyNjI3NjE3LCJpYXQiOjE3NDIyNjc2MTd9.q4s-uC_Pf4sHisIo9PKX9Jr0oLGxPRz0IRsSYEpUakD_m1oxIOapceoPXOKwV7eGfhAeUs6omH469vmO4MnYFQ";
+
 const RoomManage = () => {
   const [rooms, setRoom] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       const data = await axios.get("http://localhost:8080/room");
-      console.log(data);
     };
     fetchData();
   }, []);

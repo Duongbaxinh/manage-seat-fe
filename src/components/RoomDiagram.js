@@ -1,6 +1,13 @@
 import React, { useState, useRef } from "react";
+import { CancelIcon } from "../icons";
 
-const RoomDiagram = ({ seats, onSeatDrop, onUnassign }) => {
+const RoomDiagram = ({
+  seats,
+  onSeatDrop,
+  onUnassign,
+  objects,
+  onSetPositionObject,
+}) => {
   const [draggedSeat, setDraggedSeat] = useState(null);
   const [hoveredSeat, setHoveredSeat] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({
@@ -19,7 +26,17 @@ const RoomDiagram = ({ seats, onSeatDrop, onUnassign }) => {
   const handleDrop = (e) => {
     e.preventDefault();
     const seatId = e.dataTransfer.getData("text/plain");
+    const idObject = e.dataTransfer.getData("idObject");
     const isRepositioning = e.dataTransfer.getData("repositioning") === "true";
+
+    if (diagramRef.current) {
+      const rect = diagramRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      console.log("Vị trí chính xác:", x, y);
+      onSetPositionObject(idObject, { x, y });
+    }
 
     if (seatId && diagramRef.current) {
       const rect = diagramRef.current.getBoundingClientRect();
@@ -108,7 +125,31 @@ const RoomDiagram = ({ seats, onSeatDrop, onUnassign }) => {
           <div key={i} className="bg-white/10 rounded" />
         ))}
       </div>
-
+      {objects.length > 0 &&
+        objects.map((item, index) => (
+          <div
+            className={`absolute bg-${item.color} flex gap-3 items-center`}
+            style={{
+              top: item.posX,
+              left: item.posY,
+              backgroundColor: item.color,
+            }}
+            draggable
+            onDragEnd={(e) => {
+              const idObject = e.dataTransfer.getData("idObject");
+              const x = e.clientX;
+              const y = e.clientY;
+              console.log("check ", idObject, "  ", x, "  ", y);
+              return onSetPositionObject(idObject, { x: x, y: y });
+            }}
+            onDragStart={(e) => {
+              e.dataTransfer.setData("idObject", item.id);
+              e.dataTransfer.effectAllowed = "move";
+            }}
+          >
+            {item.name} <CancelIcon />
+          </div>
+        ))}
       {seats
         .filter((seat) => seat.posX !== 0 && seat.posY !== 0)
         .map((seat) => (

@@ -14,12 +14,6 @@ import RoomManage from "./pages/RoomManage";
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(true);
 
-  const handleLogin = (email, password) => {
-    // Add authentication logic here
-    console.log("Logging in with:", email, password);
-    setIsLoggedIn(true);
-  };
-
   const handleLogout = () => {
     setIsLoggedIn(false);
   };
@@ -37,7 +31,7 @@ function App() {
             )
           }
         /> */}
-        <Route path="/" element={<Login />} />
+        {/* <Route path="/" element={<Login />} /> */}
         <Route element={<ProtectedRoute onLogout={handleLogout} />}>
           <Route path="/" element={<Home />} />
           <Route path="/dashboard" element={<Dashboard />} />

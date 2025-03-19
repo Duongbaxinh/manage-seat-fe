@@ -7,7 +7,6 @@ const SeatList = ({ seats, onUnassignDrop, onAdd }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const unassignedSeats = seats.filter((seat) => {
-    console.log("check boolean ::: ", seat.user === null);
     return seat.posX === 0 && seat.posY === 0;
   });
   const filteredSeats = unassignedSeats.filter((seat) =>
@@ -32,7 +31,6 @@ const SeatList = ({ seats, onUnassignDrop, onAdd }) => {
     }
     setIsDragOver(false);
   };
-  console.log("check data seat", seats);
   return (
     <div
       className={`flex flex-col h-full ${
@@ -119,7 +117,11 @@ const SeatList = ({ seats, onUnassignDrop, onAdd }) => {
                     <h3 className="text-sm font-medium text-gray-900 truncate">
                       {seat.name}
                     </h3>
-                    <span className={`text-sm ${seat.isOccupied ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span
+                      className={`text-sm ${
+                        seat.isOccupied ? "text-green-600" : "text-gray-500"
+                      }`}
+                    >
                       {seat.isOccupied ? "Occupied" : "UnOccupied"}
                     </span>
                   </div>

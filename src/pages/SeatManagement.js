@@ -5,12 +5,14 @@ import axios from "axios";
 import { useParams } from "react-router-dom";
 import Popup from "../Component/atom/Popup";
 import { useForm } from "react-hook-form";
+import { CancelIcon } from "../icons";
 
 const SeatManagement = () => {
   const [seats, setSeats] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [users, setUser] = useState([]);
   const [assign, setAssign] = useState(false);
+  const [objects, setObjects] = useState([]);
   const { id } = useParams();
   const {
     register,
@@ -37,6 +39,7 @@ const SeatManagement = () => {
           },
         }
       );
+      fetchData();
       setIsOpen(false);
       reset();
     } catch (error) {
@@ -89,7 +92,6 @@ const SeatManagement = () => {
       `http://localhost:8080/seat/filter?page=0&size=10&sortBy=name&roomId=${id}`,
       authentication
     );
-    console.log("check ::: ", data.result);
     setSeats(data.result.content);
   };
   const fetchDataUser = async (authentication) => {
@@ -97,9 +99,46 @@ const SeatManagement = () => {
       `http://localhost:8080/room/users/${id}`,
       authentication
     );
-    console.log("check user", data);
+
     setUser(data.result);
   };
+
+  const handleSaveDiagram = async () => {
+    const diagram = {
+      roomId: id,
+      image: "https://example.com/updated_room_image.png",
+      seats: seats.map((seat) => ({
+        seatId: seat.id,
+        posX: seat.posX,
+        posY: seat.posY,
+      })),
+      object: "Updated meeting room layout",
+    };
+    await axios.post("http://localhost:8080/room/diagram", diagram, {
+      headers: {
+        Authorization: localStorage.getItem("accessToken"),
+      },
+    });
+    fetchData();
+  };
+
+  const handleAddObject = async (key) => {
+    setObjects((prev) => [
+      ...prev,
+      { id: prev.length + key, name: key, posX: 0, posY: 0, color: "yellow" },
+    ]);
+  };
+
+  const handleSetPositionObject = (idObject, position) => {
+    setObjects((prev) =>
+      prev.map((item) =>
+        item.id === idObject
+          ? { ...item, posX: position.x, posY: position.y }
+          : item
+      )
+    );
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     const authentication = {
@@ -110,6 +149,7 @@ const SeatManagement = () => {
     fetchData(authentication);
     fetchDataUser(authentication);
   }, []);
+  console.log("object", objects);
   return (
     <div className="max-w-screen-2xl mx-auto px-4 py-6">
       <Popup isOpen={isOpen} onClose={() => setIsOpen(false)}>
@@ -210,10 +250,25 @@ const SeatManagement = () => {
       </Popup>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Seat Management</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Drag seats to assign, reposition, or return them to the unassigned
-          list
-        </p>
+        <div className="flex gap-5 items-center">
+          <div
+            onClick={() => {
+              handleAddObject("table");
+            }}
+            className="w-[100px] h-[30px] text-white font-bold bg-yellow-300 flex items-center justify-center rounded-md"
+          >
+            Table
+          </div>
+
+          <div
+            onClick={() => {
+              handleAddObject("wall");
+            }}
+            className="w-[100px] h-[30px] text-white font-bold bg-gray-400 flex items-center justify-center rounded-md"
+          >
+            Wall
+          </div>
+        </div>
       </div>
 
       <div className="flex gap-6 h-[calc(100vh-160px)]">
@@ -225,8 +280,11 @@ const SeatManagement = () => {
           />
         </div>
         <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <button onClick={() => handleSaveDiagram()}>Save Diagram</button>
           <RoomDiagram
+            objects={objects}
             seats={seats}
+            onSetPositionObject={handleSetPositionObject}
             onSeatDrop={handleSeatDrop}
             onUnassign={handleUnassignSeat}
           />
