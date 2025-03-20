@@ -46,7 +46,7 @@ const SeatManagement = () => {
     }
   };
 
-  const handleSeatDrop = (seatId, position) => {
+  const handleSeatDrop = (seatId, position,) => {
     setSeats((prevSeats) =>
       prevSeats.map((seat) => seat.id === seatId ? {
         ...seat,
