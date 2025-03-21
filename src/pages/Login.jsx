@@ -1,8 +1,10 @@
 import axios from "axios";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/auth.context";
 
 const Login = ({ onLogin }) => {
+  const { login, storeToken } = useAuth()
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
@@ -12,17 +14,21 @@ const Login = ({ onLogin }) => {
       username: email,
       password: password,
     });
+
     if (data && data.result.accessToken) {
-      localStorage.setItem("islogin", true);
-      localStorage.setItem(
-        "user",
-        JSON.stringify({ id: data.result.id, username: data.result.username })
-      );
-      localStorage.setItem("accessToken", data.result.accessToken);
-      navigate("/room-management");
+      const user = {
+        id: data.result.id,
+        username: data.result.username,
+        room: data.result.room,
+        role: data.result.role
+      }
+      storeToken(data.result.accessToken)
+      login(user)
+      navigate(`/seat-management/${user.room}`);
+    } else {
+      navigate("/");
     }
 
-    // onLogin(email, password);
   };
 
   return (

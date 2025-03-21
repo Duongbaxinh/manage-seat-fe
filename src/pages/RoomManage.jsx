@@ -1,114 +1,208 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { MdAnalytics } from "react-icons/md";
+import { PiPlus } from "react-icons/pi";
 import { Link } from "react-router-dom";
+import Popup from "../components/atom/Popup";
+import { DeleteIcon, EditIcon } from "../icons";
 
 const RoomManage = () => {
   const [rooms, setRooms] = useState([]);
-
+  const [users, setUsers] = useState([]);
+  const [halls, setHalls] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState(null);
 
-  const handleEdit = (Room) => {
-    setEditingRoom(Room);
-    setIsModalOpen(true);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm();
+
+  const fetchData = async () => {
+    const token = localStorage.getItem("accessToken");
+    console.log("check access", token)
+    try {
+      const [roomRes, userRes, hallRes] = await Promise.all([
+        axios.get("http://localhost:8080/room", {
+          headers: { Authorization: `Bearer ${JSON.parse(token)}` },
+        }),
+        axios.get("http://localhost:8080/user", {
+          headers: { Authorization: `Bearer ${JSON.parse(token)}` },
+        }),
+        axios.get("http://localhost:8080/hall", {
+          headers: { Authorization: `Bearer ${JSON.parse(token)}` },
+        }),
+      ]);
+      console.log(roomRes.data)
+      setRooms(roomRes.data.result);
+      setUsers(userRes.data.result);
+      setHalls(hallRes.data.result);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
   };
 
-  const handleDelete = (id) => {
-    setRooms(rooms.filter((Room) => Room.id !== id));
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleEdit = (room) => {
+    setEditingRoom(room);
+    reset(room);
+    setIsModalOpen(true);
   };
 
   const handleAddRoom = () => {
     setEditingRoom(null);
+    reset();
     setIsModalOpen(true);
   };
 
-  const fetchData = async () => {
-    const token = localStorage.getItem("accessToken");
-    const { data } = await axios.get("http://localhost:8080/room", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    setRooms(data.result);
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa?")) {
+      const token = localStorage.getItem("accessToken");
+      try {
+        await axios.delete(`http://localhost:8080/room/${id}`, {
+          headers: { Authorization: `Bearer ${JSON.parse(token)}` },
+        });
+        setRooms(rooms.filter((room) => room.id !== id));
+      } catch (error) {
+        console.error("Error deleting room:", error);
+      }
+    }
   };
-  useEffect(() => {
-    fetchData();
-  }, []);
+
+  const onSubmit = async (data) => {
+    const token = localStorage.getItem("accessToken");
+
+    try {
+      if (editingRoom) {
+
+        await axios.put(
+          `http://localhost:8080/room/${editingRoom.id}`,
+          data,
+          { headers: { Authorization: `Bearer ${JSON.parse(token)}` } }
+        );
+      } else {
+        console.log("check data create room ::: ", data)
+        await axios.post("http://localhost:8080/room", data, {
+          headers: { Authorization: `Bearer ${JSON.parse(token)}` },
+        });
+      }
+
+      fetchData(); // Refresh data
+      setIsModalOpen(false);
+      reset();
+    } catch (error) {
+      console.error("Error saving room:", error);
+    }
+  };
+
   return (
-    <>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Assigned rooms</h1>
-        <div className="space-x-2">
-          <button
-            onClick={handleAddRoom}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
-          >
-            Add Room
+    <div className="p-5">
+
+      <Popup title={editingRoom ? "Edit Room" : "Add Room"} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <div className="min-w-[500px] p-3">
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Name</label>
+              <input
+                {...register("name", { required: "Name is required" })}
+                className="border rounded-md px-2 py-1 shadow-md"
+                placeholder="Enter room name"
+              />
+              {errors.name && <span className="text-red-500 text-sm">{errors.name.message}</span>}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Capacity</label>
+              <input
+                {...register("capacity", { required: "Capacity is required" })}
+                type="number"
+                className="border rounded-md px-2 py-1 shadow-md"
+                placeholder="Enter room capacity"
+              />
+              {errors.name && <span className="text-red-500 text-sm">{errors.name.message}</span>}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Hall</label>
+              <select {...register("hallId", { required: "Hall is required" })} className="border rounded-md px-2 py-1 shadow-md">
+                <option value="">Select Hall</option>
+                {halls.map((hall) => (
+                  <option key={hall.hallId} value={hall.hallId}>{hall.name} </option>
+
+                ))}
+              </select>
+              {errors.hallId && <span className="text-red-500 text-sm">{errors.hallId.message}</span>}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">User</label>
+              <select {...register("userId")} className="border rounded-md px-2 py-1 shadow-md">
+                <option value="">Select User</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>{user.username}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-2 justify-end mt-4">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-gray-100 rounded-md hover:bg-gray-200">Cancel</button>
+              <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                {editingRoom ? "Update Room" : "Create Room"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </Popup>
+
+      <div className="flex flex-col justify-start items-start gap-3 mb-2">
+        <h1 className="text-2xl font-bold">Rooms Management</h1>
+        <div className="flex items-center gap-2  bg-blue-500 text-white rounded-sm px-3">
+          <button onClick={handleAddRoom}
+            className="  py-2  ">
+            <PiPlus />
           </button>
+          <p>Add new roomo</p>
         </div>
       </div>
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="bg-white shadow rounded-lg  max-h-[700vh] overflow-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Room Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Capacity
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
+            <tr className="h-[40px]">
+              <th className="text-left px-3 ">Name</th>
+              <th className="text-left px-3 ">SeatAvailable</th>
+              <th className="text-left px-3 ">Capacity</th>
+              <th className="text-left px-3 ">Owner</th><th className="text-left px-3 ">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {rooms.map((Room) => (
-              <tr key={Room.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {Room.name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {Room.capacity}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <span
-                    className={`inline-flex px-2 py-1 rounded-full text-sm ${Room.status === "Available"
-                        ? "bg-green-100 text-green-800"
-                        : Room.status === "Occupied"
-                          ? "bg-red-100 text-red-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
-                  >
-                    {Room.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                  <button
-                    onClick={() => handleEdit(Room)}
-                    className="text-blue-500 hover:text-blue-700"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(Room.id)}
-                    className="text-blue-500 hover:text-blue-700"
-                  >
-                    Delete
-                  </button>
-
-                  <Link to={`/seat-management/${Room.id}`}>Manage Seat</Link>
+          <tbody>
+            {rooms.map((room) => (
+              <tr key={room.id} className="h-[50px] border-b-[1px]">
+                <td className="px-3">{room.name}</td>
+                <td className="px-3">{room?.seats?.length ?? 0}</td>
+                <td className="px-3">{room?.capacity ?? 0}</td>
+                <td className="px-3">{room?.chief?.username ?? "-"}</td>
+                <td className="px-3">
+                  <div className="flex gap-2">
+                    <button onClick={() => handleEdit(room)}><EditIcon className="text-blue-300" /></button>
+                    <button onClick={() => handleDelete(room.id)}><DeleteIcon className="text-red-300" /></button>
+                    <Link to={`/seat-management/${room.id}`}><MdAnalytics /></Link>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </>
+    </div>
   );
 };
 
