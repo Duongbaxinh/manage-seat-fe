@@ -93,15 +93,15 @@ const RoomDiagram = ({
     };
 
     return (
-        <div className="bg-gray-300" style={{
+        <div className="!bg-[#f3f4f6] overflow-auto ml-[100px] mr-[250px]" style={{
             position: 'relative',
-            width: '100vw',
+            width: 'calc(100% - 206px)',
             height: '100%',
             overflow: 'auto',
             minHeight: '100vh'
         }}>
             <div
-                className=" w-full min-w-[100vw] min-h-[100vh] bg-gray-100  select-none"
+                className=" min-w-s  bg-gray-100  w-fit "
                 style={{
                     position: 'relative',
                     minHeight: '100%',
