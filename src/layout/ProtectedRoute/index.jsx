@@ -2,8 +2,9 @@
 
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/auth.context';
+import Header from '../Layout';
 
-const ProtectedRoute = ({ allowedRoles }) => {
+const ProtectedRoute = ({ isHeader = true, allowedRoles }) => {
     const { getUser } = useAuth();
     const user = getUser()
     if (!user) {
@@ -14,7 +15,10 @@ const ProtectedRoute = ({ allowedRoles }) => {
         return <Navigate to="/error" replace />;
     }
 
-    return <Outlet />;
+    return <>
+        {isHeader && <Header />}
+        <Outlet />
+    </>;
 };
 
 export default ProtectedRoute

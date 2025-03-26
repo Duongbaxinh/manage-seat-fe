@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useEffect } from "react";
 import useWebSocket from "react-use-websocket";
 
 const WebSocketContext = createContext(null);
@@ -16,7 +16,9 @@ export const WebSocketProvider = ({ children }) => {
                 reconnectInterval: 3000,
             }
         );
-
+    useEffect(() => {
+        console.log("check role message", lastJsonMessage)
+    }, [lastJsonMessage])
     return (
         <WebSocketContext.Provider value={{
             sendMessage,

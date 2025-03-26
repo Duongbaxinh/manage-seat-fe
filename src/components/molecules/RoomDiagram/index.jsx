@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Object from "./Object";
 import Seat from "./Seat";
+import { useWebSocketContext } from "../../../context/websoket.context";
 
 const RoomDiagram = ({
     seats,
@@ -27,7 +28,7 @@ const RoomDiagram = ({
     const [selectedObject, setSelectedObject] = useState(null);
     const [isAssign, setIsAssign] = useState(false);
     const [isReAssign, setIsReAssign] = useState(false);
-
+    const { sendJsonMessage } = useWebSocketContext();
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
     const handleDragStart = (e, object, type = "object") => {
@@ -69,8 +70,9 @@ const RoomDiagram = ({
         if (!seatId) return;
         if (e.currentTarget) {
             const rect = e.currentTarget.getBoundingClientRect();
-            const x = Math.max(0, Math.round(e.clientX - rect.left - dragOffset.x));
-            const y = Math.max(0, Math.round(e.clientY - rect.top - dragOffset.y));
+
+            const x = Math.max(0, Math.round(e.pageX - rect.left - dragOffset.x + e.currentTarget.scrollLeft));
+            const y = Math.max(0, Math.round(e.pageY - rect.top - dragOffset.y + e.currentTarget.scrollTop));
             onSeatDrop(seatId, { x, y }, true);
         }
         setIsDrag(false);
@@ -93,13 +95,17 @@ const RoomDiagram = ({
     };
 
     return (
-        <div className="!bg-[#f3f4f6] overflow-auto ml-[100px] mr-[250px]" style={{
-            position: 'relative',
-            width: 'calc(100% - 206px)',
-            height: '100%',
-            overflow: 'auto',
-            minHeight: '100vh'
-        }}>
+        <div
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            className="!bg-[#f3f4f6] overflow-auto top-0 lef-[100px] right-[250px]" style={{
+                position: 'fixed',
+                width: 'calc(100% - 350px)',
+                height: '100%',
+                overflow: 'auto',
+                minHeight: '100vh'
+            }}>
+            <div className="" onClick={() => sendJsonMessage({ type: "auth" })} >JOIN</div>
             <div
                 className=" min-w-s  bg-gray-100  w-fit "
                 style={{
@@ -107,8 +113,7 @@ const RoomDiagram = ({
                     minHeight: '100%',
                     minWidth: '100%'
                 }}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
+
             >
                 {diagramUrl && showImage && (<img src={diagramUrl} alt="layoutImage" className="w-full h-auto" />)}
                 <div className="absolute top-2 left-2 text-sm font-medium text-gray-700">

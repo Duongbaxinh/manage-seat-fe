@@ -14,7 +14,9 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route element={<ProtectedRoute allowedRoles={[ROLES.SUPERUSER]} />}>
+        <Route
+          element={<ProtectedRoute isHeader allowedRoles={[ROLES.SUPERUSER]} />}
+        >
           <Route path="/room-management" element={<RoomManage />} />
         </Route>
         <Route path="/seat-management/:id" element={<SeatManagement />} />

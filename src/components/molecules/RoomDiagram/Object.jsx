@@ -70,7 +70,7 @@ const Object = ({
       draggable={!isResizing}
       key={object.id}
       tabIndex={0}
-      // onBlur={() => setTimeout(() => setSelectedObject(null), 200)}
+      onBlur={() => setTimeout(() => setSelectedObject(null), 500)}
       className="group"
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}

@@ -2,11 +2,13 @@ import axios from "axios";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/auth.context";
+import { useWebSocketContext } from "../context/websoket.context";
 
 const Login = ({ onLogin }) => {
   const { login, storeToken } = useAuth()
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const { sendJsonMessage, sendMessage } = useWebSocketContext();
   const navigate = useNavigate();
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,6 +26,7 @@ const Login = ({ onLogin }) => {
       }
       storeToken(data.result.accessToken)
       login(user)
+      await sendMessage(JSON.stringify({ type: "auth", userId: user.id, role: user.role }))
       navigate(`/seat-management/${user.room}`);
     } else {
       navigate("/");

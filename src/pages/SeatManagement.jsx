@@ -361,7 +361,7 @@ const SeatManagement = () => {
 
             )}
           </div>
-          <div className=" flex-grow ml-[80px] lr-[250px]  ">
+          <div className=" flex-grow ml-[80px] mr-[150px]  ">
             <RoomDiagram
               permissionAction={permission(getUser(), "update:seat", owner)}
               showImage={showImage}

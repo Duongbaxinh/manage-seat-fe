@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink, useNavigate, Outlet } from "react-router-dom";
 
-const Layout = ({ onLogout }) => {
+const Header = ({ onLogout }) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -97,4 +97,4 @@ const Layout = ({ onLogout }) => {
   );
 };
 
-export default Layout;
+export default Header;
