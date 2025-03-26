@@ -1,14 +1,14 @@
 import React, { useState } from "react";
-import Object from "./Object";
-import Seat from "./Seat";
+import { Rnd } from "react-rnd";
 import { useWebSocketContext } from "../../../context/websoket.context";
+import Seat from "./Seat";
 
 const RoomDiagram = ({
     seats,
     permissionAction,
     onSetNameObject,
     users,
-    onSeatDrop,
+    onSetSeatPosition,
     objects,
     onSetPositionObject,
     onDeleteObject,
@@ -20,92 +20,25 @@ const RoomDiagram = ({
     userAssign,
     setUserAssign,
     seatAssign,
-    setSeatAssign
+    setSeatAssign,
+    onReset
 }) => {
-    const [isDrag, setIsDrag] = useState(false);
-    const [hoveredSeat, setHoveredSeat] = useState(null);
-    const [dragItem, setDragItem] = useState(null);
-    const [selectedObject, setSelectedObject] = useState(null);
+    const [optionSeat, setOptionSeat] = useState(null);
     const [isAssign, setIsAssign] = useState(false);
     const [isReAssign, setIsReAssign] = useState(false);
     const { sendJsonMessage } = useWebSocketContext();
-    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-
-    const handleDragStart = (e, object, type = "object") => {
-        if (!permissionAction) return
-        setHoveredSeat(null);
-        setDragItem(object);
-        const rect = e.target.getBoundingClientRect();
-        setDragOffset({
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
-        });
-        e.dataTransfer.effectAllowed = "move";
-    };
-
-    const handleDragEnd = (e) => {
-        if (!dragItem || !permissionAction) return;
-        const rect = e.currentTarget.parentElement.getBoundingClientRect();
-        const x = Math.max(0, Math.round(e.clientX - rect.left - dragOffset.x));
-        const y = Math.max(0, Math.round(e.clientY - rect.top - dragOffset.y));
-
-        onSetPositionObject(dragItem.id, {
-            ...dragItem,
-            posX: x,
-            posY: y,
-        });
-
-        setDragItem(null);
-    };
-
-    const handleDragOver = (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-    };
-
-    const handleDrop = (e) => {
-        e.preventDefault();
-        if (!permissionAction) return
-        const seatId = e.dataTransfer.getData("text/plain");
-        if (!seatId) return;
-        if (e.currentTarget) {
-            const rect = e.currentTarget.getBoundingClientRect();
-
-            const x = Math.max(0, Math.round(e.pageX - rect.left - dragOffset.x + e.currentTarget.scrollLeft));
-            const y = Math.max(0, Math.round(e.pageY - rect.top - dragOffset.y + e.currentTarget.scrollTop));
-            onSeatDrop(seatId, { x, y }, true);
-        }
-        setIsDrag(false);
-    };
-
-    const handleSeatDragStart = (e, seat) => {
-
-        if (!permissionAction) return
-        e.dataTransfer.setData("text/plain", seat.id);
-        e.dataTransfer.effectAllowed = "move";
-        const rect = e.target.getBoundingClientRect();
-        setDragOffset({
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
-        });
-    };
-
-    const handleSeatHover = (seatId) => {
-        setHoveredSeat(seatId)
-    };
 
     return (
         <div
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            className="!bg-[#f3f4f6] overflow-auto top-0 lef-[100px] right-[250px]" style={{
-                position: 'fixed',
-                width: 'calc(100% - 350px)',
+            // onDragOver={handleDragOver}
+            // onDrop={handleDrop}
+            className="!bg-[#f3f4f6] overflow-auto" style={{
+                width: '100%',
                 height: '100%',
                 overflow: 'auto',
                 minHeight: '100vh'
             }}>
-            <div className="" onClick={() => sendJsonMessage({ type: "auth" })} >JOIN</div>
+
             <div
                 className=" min-w-s  bg-gray-100  w-fit "
                 style={{
@@ -121,35 +54,38 @@ const RoomDiagram = ({
                 </div>
 
                 {!showImage && objects && objects.map((object) => (
-                    <Object
-                        key={object.id}
-                        permissionAction={permissionAction}
-                        object={object}
-                        selectedObject={selectedObject}
-                        onDragStart={handleDragStart}
-                        onDragEnd={handleDragEnd}
-                        onSetPositionObject={onSetPositionObject}
-                        onSetNameObject={onSetNameObject}
-                        onDeleteObject={onDeleteObject}
-                        setSelectedObject={setSelectedObject}
-                    />
+                    <Rnd
+                        size={{ width: object.width, height: object.height }}
+                        position={{ x: object.posX, y: object.posY }}
+                        onDragStop={(e, d) => onSetPositionObject(object.id, { ...object, posX: d.x, posY: d.y })}
+                        onResizeStop={(e, direction, ref, delta, position) => {
+                            onSetPositionObject(object.id, {
+                                width: parseInt(ref.style.width, 10),
+                                height: parseInt(ref.style.height, 10),
+                                ...position,
+                            });
+
+                        }}
+                        style={{ border: "1px solid black", background: "lightgray" }}
+                    >
+                        {object.name}
+                    </Rnd>
                 ))}
 
                 {seats && seats.filter((seat) => seat.posX !== 0 || seat.posY !== 0).map((seat) => (
                     <Seat
                         key={seat.id}
                         permissionAction={permissionAction}
-                        isDrag={isDrag}
                         seat={seat}
                         users={users}
-                        hoveredSeat={hoveredSeat}
+                        seatOption={optionSeat}
+                        onSeatOption={setOptionSeat}
                         onUnAssign={onUnAssign}
                         onAssign={onAssign}
-                        handleSeatDragStart={handleSeatDragStart}
-                        handleSeatHover={handleSeatHover}
                         isAssign={isAssign}
                         isReAssign={isReAssign}
                         userAssign={userAssign}
+                        onSetSeatPosition={onSetSeatPosition}
                         setUserAssign={setUserAssign}
                         seatAssign={seatAssign}
                         setSeatAssign={setSeatAssign}
@@ -157,6 +93,7 @@ const RoomDiagram = ({
                         setIsReAssign={setIsReAssign}
                         onReAssign={onReAssign}
                         seatAvailable={seats.filter((seat) => seat.user === null)}
+                        onReset={onReset}
                     />
                 ))}
             </div>

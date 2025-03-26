@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Resizable } from 'react-resizable';
 import { CancelIcon } from "../../../icons";
+import { Rnd } from "react-rnd";
 
 const Object = ({
   object,
@@ -76,33 +77,11 @@ const Object = ({
       onDragEnd={onDragEnd}
     >
       {selectedObject?.id === object.id ? (
-        <Resizable
-          width={size.width}
-          height={size.height}
-          onResize={onResize}
-          onResizeStart={handleResizeStart}
-          onResizeStop={handleResizeStop}
-          // minConstraints={[50, 30]}
-          // maxConstraints={[500, 500]}
-          resizeHandles={['se', 'sw', 'ne', 'e', 'n', 's']}
-          handle={(h, ref) => (
-            <div
-              ref={ref}
-              className="resize-handle absolute w-2 h-2 bg-blue-500 border border-white"
-              style={{
-                cursor: `${h}-resize`,
-                ...{
-                  s: { bottom: -4, left: '50%', transform: 'translateX(-50%)' },
-                  n: { top: -4, left: '50%', transform: 'translateX(-50%)' },
-                  e: { right: -4, top: '50%', transform: 'translateY(-50%)' },
-                  // w: { left: -4, top: '50%', transform: 'translateY(-50%)' },
-                  se: { bottom: -4, right: -4 },
-                  sw: { bottom: -4, left: -4 },
-                  ne: { top: -4, right: -4 },
-                }[h]
-              }}
-            />
-          )}
+        <Rnd
+          size={{ width: object.width, height: object.height }}
+          position={{ x: object.posX, y: object.posY }}
+          onDragStop={(e, d) => onSetPositionObject(object.id, { ...object, posX: d.x, posY: d.y })}
+          onResizeStop={(e, position) => onSetPositionObject(object.id, { ...object, width: size.width, height: size.height, ...position })}
         >
           <div
             style={{
@@ -121,7 +100,7 @@ const Object = ({
               className="w-full text-center cursor-move bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus:cursor-text text-white"
             />
           </div>
-        </Resizable>
+        </Rnd>
       ) : (
         <div
           style={{

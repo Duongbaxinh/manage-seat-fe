@@ -1,154 +1,191 @@
-import React from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { CancelIcon } from "../../../icons";
+import { Rnd } from "react-rnd";
+import Tippy from "@tippyjs/react";
 
 const Seat = ({
   permissionAction,
   seat,
+  seatAssign,
+  setSeatAssign,
+  onSetSeatPosition,
   users,
-  hoveredSeat,
+  seatOption,
+  onSeatOption,
   onUnAssign,
   onAssign,
-  handleSeatDragStart,
-  handleSeatHover,
   isAssign,
   setIsAssign,
   setUserAssign,
   setIsReAssign,
-  seatAvailable,
-  isReAssign,
-  userAssign,
   onReAssign,
-  setSeatAssign,
-  seatAssign,
-  isDrag
+  isReAssign,
+  seatAvailable,
+  userAssign,
+  onReset,
 }) => {
+  const optionRef = useRef(null);
+  const refMenu = useRef(null)
   const handleCancel = () => {
-    setIsAssign(false)
-    setUserAssign(null)
-    setSeatAssign(null)
-    setIsReAssign(false)
-  }
+    setIsAssign(false);
+    setUserAssign(null);
+    setSeatAssign(null);
+    setIsReAssign(false);
+  };
+
+  const handleClickRight = (e) => {
+    e.preventDefault();
+    onSeatOption(seat.id);
+  };
+
+  const handleClickOutside = useCallback(
+    (event) => {
+      if (optionRef.current && !optionRef.current.contains(event.target) && refMenu.current && !refMenu.current.contains(event.target)) {
+        onSeatOption(null);
+      }
+    },
+    [onSeatOption]
+  );
+
+  useEffect(() => {
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [handleClickOutside]);
+
   return (
-    <div
-      key={seat.id}
-      className={`absolute`}
-      onMouseLeave={() => { if (!isAssign && !isReAssign) { handleSeatHover(null) } }}
-      style={{
-        backgroundColor: seat?.user?.team?.code ?? "white",
-        left: seat.posX,
-        top: seat.posY,
-      }}
-    >
-      {hoveredSeat === seat.id && (
-        <div className="absolute min-w-[220px] z-10 bottom-[20px] left-[40px] w-[200px] bg-white p-2 rounded-md">
-          {seat?.user ? (
-            <div className="text-sm">
-              <div className="">{permissionAction.toString()}</div>
-              <div className="font-medium mb-1">{seat.name}</div>
-              <div className="text-gray-600">{seat.description}</div>
-              <div className="text-gray-600">{seat.user.username}</div>
-              <div className="text-gray-600">{seat.user.team.name}</div>
-              {isReAssign && permissionAction &&
-                <div className="w-full px-1 py-1">
-                  <select value={seatAssign} onChange={(e) => setSeatAssign(e.target.value)}
-                    className="w-full px-1 py-0 m-0"
-                  >
-                    <option value="">Select Seat</option>
-                    {seatAvailable.map((sa) => (
-                      <option className="px-1" value={sa.id}>{sa.name}</option>
-                    ))}
-                  </select>
-                </div>
-              }
-              {permissionAction && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { setIsReAssign(true) }}
-                    className="px-[5px] rounded-sm bg-green-400 text-white"
-                  >
-                    Reassign
-                  </button>
-                  {isReAssign && seatAssign && (
+    <div className="absolute">
+      <Rnd
+        size={{ width: "40px", height: "40px" }}
+        position={{ x: seat.posX, y: seat.posY }}
+        onDragStop={(e, d) => onSetSeatPosition(seat.id, { x: d.x, y: d.y }, true)}
+        style={{
+          border: "1px solid black",
+          background: seat.user ? seat.user.team.code : "lightgray",
+          position: "relative",
+        }}
+      >
+        <Tippy
+          content={
+            <div className="bg-white shadow-md rounded-sm flex flex-col gap-2 p-3">
+              <div>📌 <b>Name:</b> {seat?.name}</div>
+              <div>📝 <b>Description:</b> {seat?.description}</div>
+              <div>👤 <b>Username:</b> {seat?.user?.username}</div>
+              <div>🏢 <b>Team:</b> {seat?.user?.team?.name}</div>
+            </div>
+          }
+          allowHTML={true}
+          placement="top"
+        >
+          <div
+            ref={optionRef}
+            onContextMenu={handleClickRight}
+            className="w-10 h-10 rounded-sm shadow-md flex items-center justify-center cursor-move hover:shadow-lg"
+          >
+            {seat?.name}
+          </div>
+        </Tippy>
+
+        {seatOption === seat.id && (
+          <div ref={refMenu} className="absolute min-w-[220px] z-10 bottom-[20px] left-[40px] w-[200px] bg-white p-2 rounded-md">
+            {seat?.user ? (
+              <div className="text-sm">
+                {isReAssign && permissionAction && (
+                  <div className=" flex gap-2 w-full px-1 py-1">
+                    <select
+                      value={seatAssign}
+                      onChange={(e) => setSeatAssign(e.target.value)}
+                      className="w-full px-1 py-0 m-0"
+                    >
+                      <option value="">Select Seat</option>
+                      {seatAvailable.map((sa) => (
+                        <option key={sa.id} className="px-1" value={sa.id}>{sa.name}</option>
+                      ))}
+                    </select>
+                    {isReAssign && seatAssign && (
+                      <button
+                        onClick={() => {
+                          onReAssign(seatAssign, seat.id, seat.user.id);
+                          setIsReAssign(false);
+                        }}
+                        className="px-[5px] rounded-sm bg-green-400 text-white"
+                      >
+                        Save
+                      </button>
+                    )}
+                  </div>
+                )}
+                {permissionAction && (
+                  <div className="flex flex-col gap-2">
                     <button
-                      onClick={() => {
-                        onReAssign(seatAssign, seat.id, seat.user.id)
-                        setIsReAssign(false)
-                      }}
+                      onClick={() => setIsReAssign(true)}
                       className="px-[5px] rounded-sm bg-green-400 text-white"
                     >
-                      Save
+                      Reassign
                     </button>
-                  )}
-                  <button
-                    onClick={() => { onUnAssign(seat.id) }}
-                    className="px-[5px] rounded-sm bg-red-400 text-white"
-                  >
-                    UnAssign
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="">
-              {permissionAction ? (<div className="w-[200px] p-2 flex gap-2">
-                {isAssign && permissionAction && (
-                  <select
-                    onChange={(e) => setUserAssign(e.target.value)}
-                    className="w-full border-0 rounded-md outline-none px-2 py-1 shadow-md text-[13px]"
-                  >
-                    <option value="">Select user</option>
-                    {users.map((item) => (
-                      <option key={item.id} value={item.id}>{item.username}</option>
-                    ))}
-                  </select>
-                )}
-                {!isAssign && permissionAction && (
-                  <button
-                    className="px-[5px] py-2 rounded-sm bg-green-400 text-white"
-                    onClick={() => { setIsAssign(true) }}
-                  >
-                    Assign
-                  </button>
-                )}
-                {isAssign && userAssign && (
-                  <button
-                    onClick={() => {
-                      onAssign(seat.id, userAssign)
-                      setIsAssign(false)
-                    }}
-                    className="px-[5px] rounded-sm bg-green-400 text-white"
-                  >
-                    Save
-                  </button>
-                )}
-              </div>) : "Empty"}
-            </div>
-          )}
 
-          {(isAssign || isReAssign) && (
-            <button className="absolute top-0 right-0"
-              onClick={() => handleCancel()}
-            ><CancelIcon className="text-[13px]" />
-            </button>)}
-        </div>
-      )}
-      <div
-        className="w-10 h-10
-        rounded-sm shadow-md flex items-center 
-        justify-center cursor-move
-         hover:shadow-lg transition-all"
-        draggable
-        onDragStart={(e) => handleSeatDragStart(e, seat)}
-        onMouseEnter={() => { if (!isAssign && !isReAssign) { handleSeatHover(seat.id) } }}
-      >
-        <div className="flex flex-col items-center">
-          <span className="text-base">{seat.avatar}</span>
-          <span className="text-xs font-medium text-gray-600">
-            {seat.name}
-          </span>
-        </div>
-
-      </div>
+                    <button
+                      onClick={() => onUnAssign(seat.id)}
+                      className="px-[5px] rounded-sm bg-red-400 text-white"
+                    >
+                      UnAssign
+                    </button>
+                    <button
+                      onClick={() => onReset(seat.id)}
+                      className="px-[5px] rounded-sm bg-red-400 text-white"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                {permissionAction && (
+                  <div className="w-[200px] p-2 flex gap-2">
+                    {isAssign && (
+                      <select
+                        onChange={(e) => setUserAssign(e.target.value)}
+                        className="w-full border-0 rounded-md outline-none px-2 py-1 shadow-md text-[13px]"
+                      >
+                        <option value="">Select user</option>
+                        {users.map((item) => (
+                          <option key={item.id} value={item.id}>{item.username}</option>
+                        ))}
+                      </select>
+                    )}
+                    {!isAssign && (
+                      <button
+                        className="px-[5px] py-2 rounded-sm bg-green-400 text-white"
+                        onClick={() => setIsAssign(true)}
+                      >
+                        Assign
+                      </button>
+                    )}
+                    {isAssign && userAssign && (
+                      <button
+                        onClick={() => {
+                          onAssign(seat.id, userAssign);
+                          setIsAssign(false);
+                        }}
+                        className="px-[5px] rounded-sm bg-green-400 text-white"
+                      >
+                        Save
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            {(isAssign || isReAssign) && (
+              <button className="absolute top-0 right-0" onClick={handleCancel}>
+                <CancelIcon className="text-[13px]" />
+              </button>
+            )}
+          </div>
+        )}
+      </Rnd>
     </div>
   );
 };

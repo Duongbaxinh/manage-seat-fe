@@ -1,7 +1,7 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { BsEye, BsEyeSlash } from "react-icons/bs";
+import { BsDiagram2Fill, BsEye, BsEyeSlash } from "react-icons/bs";
 import { useParams } from "react-router-dom";
 import Popup from "../components/atom/Popup";
 import RoomDiagram from "../components/molecules/RoomDiagram";
@@ -11,6 +11,8 @@ import { useWebSocketContext } from "../context/websoket.context";
 import useConfirmReload from "../hooks/useConfirmReload";
 import useSaveLocalStorage from "../hooks/useSaveLocalStorage";
 import { permission } from "../utils/permission";
+import { BiObjectsVerticalBottom, BiPlus, BiSave, BiUpload } from "react-icons/bi";
+import { TbImageInPicture } from "react-icons/tb";
 
 const SeatManagement = () => {
   const { sendMessage,
@@ -65,7 +67,7 @@ const SeatManagement = () => {
     }
   };
 
-  const handleSeatDrop = (seatId, position,) => {
+  const handleSetSeatPosition = (seatId, position,) => {
     setSeats((prevSeats) =>
       prevSeats.map((seat) => seat.id === seatId ? {
         ...seat,
@@ -74,6 +76,29 @@ const SeatManagement = () => {
       } : seat)
     );
   };
+
+  const handleSetNameObject = (e, idObject) => {
+    if (objects.length <= 0) return
+    setObjects((prev) => prev.map((object) => object.id === idObject ? { ...object, name: e.target.value } : object))
+  }
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile);
+
+    if (selectedFile) {
+      const objectUrl = URL.createObjectURL(selectedFile);
+      setPreviewUrl(objectUrl);
+    }
+  };
+
+  const handleResetSeat = (seatId) => {
+    setSeats((prevSeats) =>
+      prevSeats.map((seat) =>
+        seat.id === seatId ? { ...seat, posX: 0, posY: 0 } : seat
+      )
+    );
+  }
 
   const handleUnassignSeat = (seatId) => {
     setSeats((prevSeats) =>
@@ -226,21 +251,6 @@ const SeatManagement = () => {
     }
   };
 
-  const handleSetNameObject = (e, idObject) => {
-    if (objects.length <= 0) return
-    setObjects((prev) => prev.map((object) => object.id === idObject ? { ...object, name: e.target.value } : object))
-  }
-
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    setFile(selectedFile);
-
-    if (selectedFile) {
-      const objectUrl = URL.createObjectURL(selectedFile);
-      setPreviewUrl(objectUrl);
-    }
-  };
-
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     const authentication = {
@@ -335,7 +345,7 @@ const SeatManagement = () => {
     <div className="w-full mx-auto px-4 py-6">
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex w-full ">
-          <div className="fixed top-0 left-0 z-30 flex flex-col gap-2 justify-start items-start mb-6 w-[100px] h-[100vh] p-2 bg-white">
+          <div className=" flex flex-col gap-2 justify-start items-start mb-6  h-[100vh] p-2 bg-white">
             {previewUrl && <button className={`${!showImage ? "bg-red-400" : "bg-green-400"} w-full px-3 py-2 rounded-md`} onClick={() => setShowImage(!showImage)} >
               {!showImage ? <BsEye /> : <BsEyeSlash />}
             </button>}
@@ -343,25 +353,26 @@ const SeatManagement = () => {
               <>
                 <button
                   onClick={() => handleAddObject("object")}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                  className=" w-full flex gap-2  px-5 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                 >
-                  Add Object
+                  <BiPlus />
+                  <BiObjectsVerticalBottom />
                 </button>
 
-                <div className="bg-yellow-300 rounded-md p-1 cursor-pointer flex justify-center items-center text-white">
-                  <label htmlFor="fileupload" className="cursor-pointer ">Upload Image</label>
+                <div className=" w-full bg-yellow-300 rounded-md p-1 cursor-pointer flex justify-center items-center text-white">
+                  <label htmlFor="fileupload" className="cursor-pointer flex gap-2 px-5 py-2 "><BiUpload /> <TbImageInPicture /> </label>
                   <input id="fileupload" type="file" onChange={handleFileChange} className="mb-2 hidden" />
                 </div>
                 <button
                   onClick={handleSaveDiagram}
-                  className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                  className=" w-full  flex gap-2 px-5 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
                 >
-                  Save Layout
+                  <BiSave /><BsDiagram2Fill />
                 </button></>
 
             )}
           </div>
-          <div className=" flex-grow ml-[80px] mr-[150px]  ">
+          <div className=" flex-grow   ">
             <RoomDiagram
               permissionAction={permission(getUser(), "update:seat", owner)}
               showImage={showImage}
@@ -379,11 +390,12 @@ const SeatManagement = () => {
               seatAssign={seatAssign}
               setSeatAssign={setSeatAssign}
               setUserAssign={setUserAssign}
-              onSeatDrop={handleSeatDrop}
+              onSetSeatPosition={handleSetSeatPosition}
               onUnassign={handleUnassignSeat}
+              onReset={handleResetSeat}
             />
           </div>
-          <div className=" fixed top-0 right-0  w-[250px] h-[100vh] p-2 bg-white">
+          <div className=" w-[200px]  h-[100vh] p-2 bg-white">
             <SeatList
               permissionAction={permission(getUser(), "update:seat", owner)}
               onAssign={handleAssign}
