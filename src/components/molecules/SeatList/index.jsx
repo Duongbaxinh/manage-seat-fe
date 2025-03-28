@@ -5,6 +5,9 @@ import Popup from "../../atom/Popup";
 
 const SeatList = ({ seats, onUnassignDrop, onAdd, onAssign, fetchDataUser, users, setUserAssign, userAssign, seatAvailable, setSeatAssign, seatAssign, onReAssign, onUnAssign, permissionAction }) => {
     const [searchQuery, setSearchQuery] = useState("");
+    const [filterSeat, setFilterSeat] = useState({
+
+    })
     const [isDragOver, setIsDragOver] = useState(false);
     const [seatDetail, setSeatDetail] = useState(null);
     const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -36,13 +39,14 @@ const SeatList = ({ seats, onUnassignDrop, onAdd, onAssign, fetchDataUser, users
     return (
         <div className={`flex flex-col h-full ${isDragOver ? "bg-blue-50" : ""} transition-colors`}
             onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
-            <div className="p-4 bg-white border-b border-gray-200">
+            <div className="p-2 bg-white border-b border-gray-200">
                 <div className="flex items-center justify-between mb-3">
                     <h2 className="text-sm font-medium text-gray-900">Unassigned Seats</h2>
                     <span className="text-xs text-gray-500">{unassignedSeats.length} seats</span>
                 </div>
                 <div className="relative flex gap-4">
-                    <input type="text" placeholder="Search seats..." className="  w-full pl-8 pr-3 py-1.5 text-sm border !border-black shadow-md rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    <input type="text" placeholder="Search seats..." className="  w-full pl-8  py-1.5 text-sm border !border-black shadow-md rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                     <SearchIcon className="w-4 h-4 text-gray-400 absolute left-2.5 top-2.5" />
                     {permissionAction && (
                         <button onClick={onAdd} className="flex items-center justify-center bg-blue-500 text-white rounded-sm min-w-[30px] max-w-[30px] min-h-[30px] max-h-[30px]">
@@ -50,20 +54,27 @@ const SeatList = ({ seats, onUnassignDrop, onAdd, onAssign, fetchDataUser, users
                         </button>
                     )}
                 </div>
+                <div className="flex gap-4 w-full mt-[20px]">
+                    <input className="bg-blue-200 max-w-[10px] max-h-[10px]" type="checkbox" onChange={(e) => { setFilterSeat(prev => ({ "unA": e.target.checked })) }} />
+                    <label htmlFor="" className="text-[10px]">Available</label>
+                    <input className="bg-blue-200 max-w-[10px] max-h-[10px]" type="checkbox" onChange={(e) => { setFilterSeat(prev => ({ "A": e.target.checked })) }} />
+                    <label htmlFor="" className="text-[10px]"> UnAvailable</label>
+                </div>
             </div>
 
             <div className="flex-1 overflow-auto">
                 {filteredSeats.map(seat => (
                     <div key={seat.id} style={{ backgroundColor: seat?.user?.team?.code ?? "white" }} className="p-3 bg-white hover:bg-gray-50 transition-colors cursor-move group" draggable
                         onDragStart={(e) => {
-                            e.dataTransfer.setData("text/plain", seat.id);
+                            if (!permissionAction) return
+                            e.dataTransfer.setData("seatDragId", seat.id);
                             e.dataTransfer.effectAllowed = "move";
                         }}>
                         <div className="flex items-center gap-3 relative">
                             <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-blue-50 transition-colors">
                                 <ChairIcon className="w-5 h-5 text-gray-600" />
                             </div>
-                            <div className="min-w-0 flex gap-3 items-center flex-1">
+                            <div className=" flex gap-3 items-center flex-1">
                                 <h3 className="text-sm font-medium text-gray-900 truncate">{seat.name}</h3>
                                 <span className={`text-sm ${seat.isOccupied ? "text-green-600" : "text-gray-500"}`}>
                                     {seat.isOccupied ? "Occupied" : "UnOccupied"}

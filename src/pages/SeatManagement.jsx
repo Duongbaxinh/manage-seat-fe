@@ -1,8 +1,8 @@
 import axios from "axios";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { BsDiagram2Fill, BsEye, BsEyeSlash } from "react-icons/bs";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import Popup from "../components/atom/Popup";
 import RoomDiagram from "../components/molecules/RoomDiagram";
 import SeatList from "../components/molecules/SeatList";
@@ -10,25 +10,44 @@ import { useAuth } from "../context/auth.context";
 import { useWebSocketContext } from "../context/websoket.context";
 import useConfirmReload from "../hooks/useConfirmReload";
 import useSaveLocalStorage from "../hooks/useSaveLocalStorage";
-import { permission } from "../utils/permission";
+import { permission, ROLES } from "../utils/permission";
 import { BiObjectsVerticalBottom, BiPlus, BiSave, BiUpload } from "react-icons/bi";
 import { TbImageInPicture } from "react-icons/tb";
+import { SketchPicker } from "react-color";
+import useClickOutside from "../hooks/useClickOutside";
 
+const OBJECT_NEW = {
+  id: Date.now(),
+  name: "Object",
+  color: "#9B9B9B",
+  posX: 50,
+  posY: 50,
+  width: 100,
+  height: 100,
+  rotation: 0,
+
+}
 const SeatManagement = () => {
-  const { sendMessage,
-    lastJsonMessage, readyState } = useWebSocketContext();
+  const { sendMessage, lastJsonMessage } = useWebSocketContext();
   const { getUser } = useAuth()
   const [userAssign, setUserAssign] = useState(null);
   const [seatAssign, setSeatAssign] = useState(null);
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [seats, setSeats] = useState([]);
+  const [roomInfo, setRoomInfo] = useState(null)
   const [isOpen, setIsOpen] = useState(false);
   const [users, setUser] = useState([]);
   const [owner, setOwner] = useState(null)
   const [showImage, setShowImage] = useSaveLocalStorage("showImage", false)
   const [assign, setAssign] = useState(false);
   const [objects, setObjects] = useState([]);
+  const [objected, setObjected] = useState(null)
+  const [showInfoUser, setShowInfoUser] = useState(false)
+  const [color, setColor] = useState("#ff0000");
+
+  const refObject = useRef(null);
+  const refColor = useRef(null);
   const { id } = useParams();
   const {
     register,
@@ -67,7 +86,7 @@ const SeatManagement = () => {
     }
   };
 
-  const handleSetSeatPosition = (seatId, position,) => {
+  const handleSetSeatPosition = (seatId, position) => {
     setSeats((prevSeats) =>
       prevSeats.map((seat) => seat.id === seatId ? {
         ...seat,
@@ -138,7 +157,6 @@ const SeatManagement = () => {
 
   const handleReAssign = async (newSeatId, oldSeatId, userId) => {
     const token = localStorage.getItem("accessToken");
-    console.log("check seatId :::: ", newSeatId, "   ", oldSeatId, "  ", userId)
     await axios.put("http://localhost:8080/seat/reassign", {
       "newSeatId": newSeatId,
       "oldSeatId": oldSeatId,
@@ -174,20 +192,11 @@ const SeatManagement = () => {
     }
 
   }
-  const handleAddObject = (type) => {
-    const newObject = {
-      id: Date.now(),
-      name: type,
-      posX: 50,
-      posY: 50,
-      width: type === "wall" ? 200 : 100,
-      height: type === "wall" ? 20 : 100,
-      rotation: 0,
-    };
+  const handleAddObject = (newObject) => {
     setObjects((prev) => [...prev, newObject]);
   };
 
-  const handleSetPositionObject = (objectId, updates) => {
+  const handleUpdateObject = (objectId, updates) => {
     setObjects((prev) =>
       prev.map((item) =>
         item.id === objectId ? { ...item, ...updates } : item
@@ -235,21 +244,31 @@ const SeatManagement = () => {
       alert(error.message)
     }
   }
-  const fetchData = async (authentication) => {
+  const fetchData = useCallback(async (authentication) => {
     try {
       const [roomResponse] = await Promise.all([
-        axios.get(`http://localhost:8080/room/${id}`, authentication),
+        axios.get(`http://localhost:8080/room/view/${id}`, authentication),
       ]);
 
       setPreviewUrl(roomResponse.data.result.image)
       setOwner(roomResponse.data.result.chief)
       setSeats(roomResponse.data.result.seats);
       setObjects(JSON.parse(roomResponse.data.result.object) ?? []);
+      setRoomInfo({
+        name: roomResponse.data.result.name,
+        floor: roomResponse.data.result.floor,
+        hall: roomResponse.data.result.hall,
+      })
 
     } catch (error) {
       console.error("Error fetching data:", error);
     }
-  };
+  }, [id]);
+
+  const handleColor = (newColor) => {
+    setColor(newColor)
+    handleUpdateObject(objected.id, { color: newColor.hex })
+  }
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -267,118 +286,142 @@ const SeatManagement = () => {
   }, []);
 
   useEffect(() => {
+    if (!lastJsonMessage) return;
+
     const token = localStorage.getItem("accessToken");
     const authentication = {
-      headers: {
-        Authorization: `Bearer ${JSON.parse(token)}`,
-      },
+      headers: { Authorization: `Bearer ${JSON.parse(token)}` },
     };
-    if (lastJsonMessage) {
-      switch (lastJsonMessage.type) {
-        case "notice":
-          console.log("Received message:", lastJsonMessage.data.notice);
-          alert(lastJsonMessage.data.notice.toString())
-          fetchData(authentication)
-          break;
-        case "seatUpdate":
-          console.log("Updating seat: ", lastJsonMessage.data);
-          setSeats((prevSeats) =>
-            prevSeats.map((seat) =>
-              seat.id === lastJsonMessage.data.id ? { ...seat, ...lastJsonMessage.data } : seat
-            )
-          );
-          break;
-        case "reassignSeat":
-          console.log("Reassign seat: ", lastJsonMessage.data);
-          setSeats((prevSeats) => {
-            const updatedSeats = prevSeats.map((seat) => {
-              if (seat.id === lastJsonMessage.data.newSeat?.id) {
-                return { ...seat, isOccupied: true, user: { ...lastJsonMessage.data.newSeat.user } };
-              }
-              if (seat.id === lastJsonMessage.data.oldSeat?.id) {
-                return { ...seat, isOccupied: false, user: null };
-              }
-              return seat;
-            });
 
-            return [...updatedSeats];
-          });
-          break;
+    const { type, data } = lastJsonMessage;
 
-        case "seatCreate":
-          console.log("Creating new seat: ", lastJsonMessage.data.id);
-          setSeats((prevSeats) => [...prevSeats, lastJsonMessage.data]);
-          break;
+    switch (type) {
+      case "notice":
+        alert(data.message.toString());
+        fetchData(authentication);
+        break;
 
-        case "seatDelete":
-          console.log("Deleting seat: ", lastJsonMessage.data.seatId);
-          setSeats((prevSeats) =>
-            prevSeats.filter((seat) => seat.id !== lastJsonMessage.data.seatId)
-          );
-          break;
-        case "assignSeat":
-          console.log("Assign seat: ", lastJsonMessage.data);
-          setSeats((prevSeats) =>
-            prevSeats.map((seat) =>
-              seat.id === lastJsonMessage.data.id ? { ...seat, isOccupied: true, user: lastJsonMessage?.data.user } : seat
-            )
-          );
-          break;
-        case "unAssignSeat":
-          console.log("Assign seat: ", lastJsonMessage.data.id);
-          setSeats((prevSeats) =>
-            prevSeats.map((seat) =>
-              seat.id === lastJsonMessage.data.id ? { ...seat, isOccupied: false, user: lastJsonMessage?.data.user } : seat
-            )
-          );
-          break;
+      case "seatUpdate":
+        setSeats(prevSeats =>
+          prevSeats.map(seat =>
+            seat.id === data.id ? { ...seat, ...data } : seat
+          )
+        );
+        break;
 
-        default:
-          console.warn("Unknown message type:", lastJsonMessage.type);
-      }
+      case "createSeat":
+        setSeats(prevSeats => [...prevSeats, data]);
+        break;
+
+      case "seatDelete":
+        setSeats(prevSeats => prevSeats.filter(seat => seat.id !== data.seatId));
+        break;
+      case "reassignSeat":
+        setSeats(prevSeats =>
+          prevSeats.map(seat =>
+            seat.id === data.newSeat?.id
+              ? { ...seat, isOccupied: true, user: { ...data.newSeat.user } }
+              : seat.id === data.oldSeat?.id
+                ? { ...seat, isOccupied: false, user: null }
+                : seat
+          )
+        );
+        break;
+
+      case "assignSeat":
+        setSeats(prevSeats =>
+          prevSeats.map(seat =>
+            seat.id === data.id ? { ...seat, isOccupied: true, user: data.user } : seat
+          )
+        );
+        break;
+
+      case "unAssignSeat":
+        setSeats(prevSeats =>
+          prevSeats.map(seat =>
+            seat.id === data.id ? { ...seat, isOccupied: false, user: null } : seat
+          )
+        );
+        break;
+
+      default:
+        console.warn("Unknown message type:", type);
     }
+  }, [fetchData, lastJsonMessage]);
 
-  }, [lastJsonMessage])
-
-  console.log("check data :::: ", getUser(), "  ", owner)
+  // useClickOutside([refObject, refColor], () => {
+  //   setObjected(null);
+  // });
+  const user = getUser()
   return (
     <div className="w-full mx-auto px-4 py-6">
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex w-full ">
-          <div className=" flex flex-col gap-2 justify-start items-start mb-6  h-[100vh] p-2 bg-white">
+      <div className="w-full flex items-center justify-between gap-4 px-[30px] bg-white shadow-sm py-3">
+        <div className="flex items-center gap-3">
+          <img className="relative min-w-[30px] min-h-[30px] max-w-[30px] max-h-[30px] rounded-full bg-blue-200 items-center justify-center "
+            src="/LOGO.png" alt="LOGO" />
+          {user.role === ROLES.SUPERUSER && (<Link to={"/room-management"} className="uppercase">DashBoard</Link>)}</div>
+        <div className="relative min-w-[30px] min-h-[30px] max-w-[30px] max-h-[30px] rounded-full bg-blue-200 items-center justify-center "
+          onMouseEnter={() => setShowInfoUser(true)}
+          onMouseLeave={() => setShowInfoUser(false)}
+        >
+          <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="logo" className="w-full h-full object-cover rounded-full" />
+          {showInfoUser && (<div className="w-[200px] px-3 py-2 absolute z-30 top-auto right-[20px] rounded-md bg-white shadow-md ">
+            <h1 className="text-sm font-semibold text-gray-700">Username: {user.username}</h1>
+            <h1 className="text-sm font-semibold text-gray-700">Role: {user.role}</h1>
+            <h1 className="text-sm font-semibold text-gray-700">Team: {user.team}</h1>
+          </div>)}
+        </div>
+      </div>
+      {roomInfo && (
+        <div className="flex items-center justify-start gap-3  bg-white px-7 py-3 mt-2">
+          <h1 className="text-2xl font-semibold text-gray-700 uppercase">{roomInfo.name} - </h1>
+          <h1 className="text-2xl font-semibold text-gray-700 uppercase"> {roomInfo.floor} - </h1>
+          <h1 className="text-2xl font-semibold text-gray-700 uppercase"> {roomInfo.hall}</h1>
+        </div>
+      )}
+      <div className="rounded-lg shadow-sm mt-6">
+        <div className="flex gap-3 w-full ">
+          <div className=" sticky top-0 flex flex-col gap-2 justify-start items-start mb-6  h-[90vh] p-2 bg-white text-white">
             {previewUrl && <button className={`${!showImage ? "bg-red-400" : "bg-green-400"} w-full px-3 py-2 rounded-md`} onClick={() => setShowImage(!showImage)} >
-              {!showImage ? <BsEye /> : <BsEyeSlash />}
+              {!showImage ? <div className="flex items-center gap-2"><BsEye /> <p>Hidden Diagram</p></div> : <div className="flex items-center gap-2"><BsEyeSlash /> <p>Visible Diagram</p></div>}
             </button>}
             {permission(getUser(), "update:seat", owner) && (
               <>
                 <button
-                  onClick={() => handleAddObject("object")}
+                  onClick={() => handleAddObject(OBJECT_NEW)}
                   className=" w-full flex gap-2  px-5 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                 >
                   <BiPlus />
-                  <BiObjectsVerticalBottom />
+                  Add New Object
                 </button>
 
-                <div className=" w-full bg-yellow-300 rounded-md p-1 cursor-pointer flex justify-center items-center text-white">
-                  <label htmlFor="fileupload" className="cursor-pointer flex gap-2 px-5 py-2 "><BiUpload /> <TbImageInPicture /> </label>
+                <div className=" w-full bg-yellow-300 rounded-md p-1 cursor-pointer flex items-center text-white">
+                  <label htmlFor="fileupload" className="cursor-pointer flex gap-2 px-5 py-2 "><BiUpload /> Upload Diagram </label>
                   <input id="fileupload" type="file" onChange={handleFileChange} className="mb-2 hidden" />
                 </div>
                 <button
                   onClick={handleSaveDiagram}
                   className=" w-full  flex gap-2 px-5 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
                 >
-                  <BiSave /><BsDiagram2Fill />
-                </button></>
+                  <BiSave /><p>Save Diagram</p>
+                </button>
+                {/* {objected && ( */}
+                <div ref={refColor} className="w-full">
+                  <SketchPicker color={color} onChange={(newColor) => handleColor(newColor)} />
+                </div>
 
+              </>
             )}
           </div>
-          <div className=" flex-grow   ">
+
+          <div style={{ border: "1px solid blue" }} className="flex-grow overflow-auto py-10">
             <RoomDiagram
               permissionAction={permission(getUser(), "update:seat", owner)}
               showImage={showImage}
               diagramUrl={previewUrl}
+              onAddObject={handleAddObject}
               onSetNameObject={handleSetNameObject}
-              onSetPositionObject={handleSetPositionObject}
+              onUpdateObject={handleUpdateObject}
               objects={objects}
               onDeleteObject={handleDeleteObject}
               users={users}
@@ -393,9 +436,13 @@ const SeatManagement = () => {
               onSetSeatPosition={handleSetSeatPosition}
               onUnassign={handleUnassignSeat}
               onReset={handleResetSeat}
+              refObject={refObject}
+              setObjected={setObjected}
             />
+
           </div>
-          <div className=" w-[200px]  h-[100vh] p-2 bg-white">
+
+          <div className=" sticky top-0  min-w-[200px]  h-[90vh] p-2 bg-white" >
             <SeatList
               permissionAction={permission(getUser(), "update:seat", owner)}
               onAssign={handleAssign}

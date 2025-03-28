@@ -1,11 +1,14 @@
-import React, { useCallback, useEffect, useRef } from "react";
-import { CancelIcon } from "../../../icons";
-import { Rnd } from "react-rnd";
 import Tippy from "@tippyjs/react";
+import React, { useRef } from "react";
+import { Rnd } from "react-rnd";
+import useClickOutside from "../../../hooks/useClickOutside";
+import { CancelIcon } from "../../../icons";
 
 const Seat = ({
   permissionAction,
   seat,
+  isDrag,
+  setIsDrag,
   seatAssign,
   setSeatAssign,
   onSetSeatPosition,
@@ -38,42 +41,42 @@ const Seat = ({
     onSeatOption(seat.id);
   };
 
-  const handleClickOutside = useCallback(
-    (event) => {
-      if (optionRef.current && !optionRef.current.contains(event.target) && refMenu.current && !refMenu.current.contains(event.target)) {
-        onSeatOption(null);
-      }
-    },
-    [onSeatOption]
-  );
+  useClickOutside([optionRef, refMenu], () => {
+    onSeatOption(null);
+  });
 
-  useEffect(() => {
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [handleClickOutside]);
 
   return (
     <div className="absolute">
       <Rnd
         size={{ width: "40px", height: "40px" }}
         position={{ x: seat.posX, y: seat.posY }}
-        onDragStop={(e, d) => onSetSeatPosition(seat.id, { x: d.x, y: d.y }, true)}
+        onDragStop={(e, d) => {
+          if (!permissionAction) return
+          setIsDrag(null)
+          return onSetSeatPosition(seat.id, { x: d.x, y: d.y }, true)
+        }}
+        onDrag={() => {
+          if (!permissionAction) return
+          setIsDrag(seat.id)
+        }}
         style={{
-          border: "1px solid black",
           background: seat.user ? seat.user.team.code : "lightgray",
           position: "relative",
         }}
       >
         <Tippy
           content={
-            <div className="bg-white shadow-md rounded-sm flex flex-col gap-2 p-3">
-              <div>📌 <b>Name:</b> {seat?.name}</div>
-              <div>📝 <b>Description:</b> {seat?.description}</div>
-              <div>👤 <b>Username:</b> {seat?.user?.username}</div>
-              <div>🏢 <b>Team:</b> {seat?.user?.team?.name}</div>
-            </div>
+            isDrag === null && (
+              seat?.user ? (
+                <div className="bg-white shadow-md rounded-sm flex flex-col gap-2 p-3">
+                  <div>📌 <b>Name:</b> {seat?.name}</div>
+                  <div>📝 <b>Description:</b> {seat?.description}</div>
+                  <div>👤 <b>Username:</b> {seat?.user?.username}</div>
+                  <div>🏢 <b>Team:</b> {seat?.user?.team?.name}</div>
+                </div>
+              ) : (<p className="p-2 bg-white font-bold rounded-sm">UnOccupant</p>)
+            )
           }
           allowHTML={true}
           placement="top"
@@ -81,14 +84,21 @@ const Seat = ({
           <div
             ref={optionRef}
             onContextMenu={handleClickRight}
-            className="w-10 h-10 rounded-sm shadow-md flex items-center justify-center cursor-move hover:shadow-lg"
+            className="relative w-10 h-10 rounded-sm shadow-md flex items-center justify-center cursor-move hover:shadow-lg"
           >
             {seat?.name}
+            {isDrag === seat.id && (
+              <>
+                <div className="absolute -top-[1px]  min-w-[100vw] h-[0.5px] bg-red-300 z-[99]"></div>
+                <div className="absolute -left-[1px]  min-h-[100vw] w-[0.5px] bg-red-300 z-[99]"></div>
+                <div className="absolute bottom-[1px]  min-w-[100vw] h-[0.5px] bg-red-300 z-[99]"></div>
+                <div className="absolute right-[1px]  min-h-[100vw] w-[0.5px] bg-red-300 z-[99]"></div></>
+            )}
           </div>
         </Tippy>
 
-        {seatOption === seat.id && (
-          <div ref={refMenu} className="absolute min-w-[220px] z-10 bottom-[20px] left-[40px] w-[200px] bg-white p-2 rounded-md">
+        {seatOption === seat.id && permissionAction && (
+          <div ref={refMenu} className="absolute min-w-[220px] z-50 top-[40px] left-[40px] w-[200px] bg-white p-2 rounded-md">
             {seat?.user ? (
               <div className="text-sm">
                 {isReAssign && permissionAction && (
@@ -106,8 +116,8 @@ const Seat = ({
                     {isReAssign && seatAssign && (
                       <button
                         onClick={() => {
-                          onReAssign(seatAssign, seat.id, seat.user.id);
-                          setIsReAssign(false);
+                          onReAssign(seatAssign, seat.id, seat.user.id)
+                          handleCancel()
                         }}
                         className="px-[5px] rounded-sm bg-green-400 text-white"
                       >
@@ -131,19 +141,14 @@ const Seat = ({
                     >
                       UnAssign
                     </button>
-                    <button
-                      onClick={() => onReset(seat.id)}
-                      className="px-[5px] rounded-sm bg-red-400 text-white"
-                    >
-                      Reset
-                    </button>
+
                   </div>
                 )}
               </div>
             ) : (
               <div>
                 {permissionAction && (
-                  <div className="w-[200px] p-2 flex gap-2">
+                  <div className="w-[200px]  flex gap-2">
                     {isAssign && (
                       <select
                         onChange={(e) => setUserAssign(e.target.value)}
@@ -156,8 +161,9 @@ const Seat = ({
                       </select>
                     )}
                     {!isAssign && (
+
                       <button
-                        className="px-[5px] py-2 rounded-sm bg-green-400 text-white"
+                        className="w-full rounded-sm bg-green-400 text-white"
                         onClick={() => setIsAssign(true)}
                       >
                         Assign
@@ -176,6 +182,7 @@ const Seat = ({
                     )}
                   </div>
                 )}
+
               </div>
             )}
             {(isAssign || isReAssign) && (
@@ -183,10 +190,19 @@ const Seat = ({
                 <CancelIcon className="text-[13px]" />
               </button>
             )}
+
+            <button
+              onClick={() => onReset(seat.id)}
+              className=" w-full mt-2 px-[5px] rounded-sm bg-red-400 text-white"
+            >
+              Reset
+            </button>
+
           </div>
-        )}
-      </Rnd>
-    </div>
+        )
+        }
+      </Rnd >
+    </div >
   );
 };
 
