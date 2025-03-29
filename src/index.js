@@ -7,12 +7,15 @@ import reportWebVitals from "./reportWebVitals";
 import { WebSocketProvider } from "./context/websoket.context";
 import Layout from "./layout/Layout";
 import { AuthProvider } from "./context/auth.context";
+import { SeatProvider } from "./context/seat.context";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <WebSocketProvider>
     <AuthProvider>
-      <App />
+      <SeatProvider>
+        <App />
+      </SeatProvider>
     </AuthProvider>
   </WebSocketProvider>
 );

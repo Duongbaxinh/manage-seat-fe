@@ -3,18 +3,16 @@ import { Rnd } from "react-rnd";
 import { CancelIcon } from "../../../icons";
 import Seat from "./Seat";
 import Object from "./Object";
+import { useSeatContext } from "../../../context/seat.context";
 
 const RoomDiagram = (
     {
         seats,
         permissionAction,
-        onSetNameObject,
         users,
         onSetSeatPosition,
-        objects,
         onAddObject,
         onUpdateObject,
-        onDeleteObject,
         onUnAssign,
         onAssign,
         onReAssign,
@@ -28,6 +26,7 @@ const RoomDiagram = (
         refObject,
         setObjected
     }) => {
+    const { objects } = useSeatContext()
     const [option, setOption] = useState(null);
     const [isAssign, setIsAssign] = useState(false);
     const [isReAssign, setIsReAssign] = useState(false);
@@ -88,9 +87,6 @@ const RoomDiagram = (
                     <Object
                         isDrag={isDrag}
                         object={object}
-                        onCopyOrPaste={handleCopyOrPaste}
-                        onDeleteObject={onDeleteObject}
-                        onSetNameObject={onSetNameObject}
                         onUpdateObject={onUpdateObject}
                         permissionAction={permissionAction}
                         refObject={refObject}
@@ -98,6 +94,7 @@ const RoomDiagram = (
                         setObjected={setObjected}
                         key={object.id}
                     />
+
                 ))}
 
                 {seats && seats.filter((seat) => seat.posX !== 0 || seat.posY !== 0).map((seat) => (

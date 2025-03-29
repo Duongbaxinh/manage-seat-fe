@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import RoomManage from "./pages/RoomManage";
 import SeatManagement from "./pages/SeatManagement";
 import { ROLES } from "./utils/permission";
+import ApprovingDiagram from "./pages/ApprovingDiagram";
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           element={<ProtectedRoute isHeader allowedRoles={[ROLES.SUPERUSER]} />}
         >
           <Route path="/room-management" element={<RoomManage />} />
+          <Route path="/approving-diagram" element={<ApprovingDiagram />} />
         </Route>
         <Route path="/seat-management/:id" element={<SeatManagement />} />
         <Route path="/error" element={<NotFound />} />

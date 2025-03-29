@@ -15,6 +15,7 @@ import { BiObjectsVerticalBottom, BiPlus, BiSave, BiUpload } from "react-icons/b
 import { TbImageInPicture } from "react-icons/tb";
 import { SketchPicker } from "react-color";
 import useClickOutside from "../hooks/useClickOutside";
+import { useSeatContext } from "../context/seat.context";
 
 const OBJECT_NEW = {
   id: Date.now(),
@@ -28,6 +29,7 @@ const OBJECT_NEW = {
 
 }
 const SeatManagement = () => {
+  const { setObjects, handleSaveDiagram, handleColor, color } = useSeatContext()
   const { sendMessage, lastJsonMessage } = useWebSocketContext();
   const { getUser } = useAuth()
   const [userAssign, setUserAssign] = useState(null);
@@ -41,10 +43,9 @@ const SeatManagement = () => {
   const [owner, setOwner] = useState(null)
   const [showImage, setShowImage] = useSaveLocalStorage("showImage", false)
   const [assign, setAssign] = useState(false);
-  const [objects, setObjects] = useState([]);
   const [objected, setObjected] = useState(null)
   const [showInfoUser, setShowInfoUser] = useState(false)
-  const [color, setColor] = useState("#ff0000");
+
 
   const refObject = useRef(null);
   const refColor = useRef(null);
@@ -57,7 +58,7 @@ const SeatManagement = () => {
   } = useForm();
 
   useConfirmReload()
-  const onSubmit = async (data) => {
+  const createSeat = async (data) => {
     try {
       const token = localStorage.getItem("accessToken");
       console.log("check data create seat :::: ", data)
@@ -96,10 +97,7 @@ const SeatManagement = () => {
     );
   };
 
-  const handleSetNameObject = (e, idObject) => {
-    if (objects.length <= 0) return
-    setObjects((prev) => prev.map((object) => object.id === idObject ? { ...object, name: e.target.value } : object))
-  }
+
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -196,45 +194,9 @@ const SeatManagement = () => {
     setObjects((prev) => [...prev, newObject]);
   };
 
-  const handleUpdateObject = (objectId, updates) => {
-    setObjects((prev) =>
-      prev.map((item) =>
-        item.id === objectId ? { ...item, ...updates } : item
-      )
-    );
-  };
 
-  const handleDeleteObject = (objectId) => {
-    setObjects((prev) => prev.filter((item) => item.id !== objectId));
-  };
 
-  const handleSaveDiagram = async () => {
-    try {
-      const token = localStorage.getItem("accessToken");
-      const formData = new FormData();
-      formData.append("roomId", id);
-      if (file) {
-        formData.append("image", file ? file : null);
-      }
-      formData.append("seats", JSON.stringify(seats.map((seat) => ({
-        seatId: seat.id,
-        posX: seat.posX,
-        posY: seat.posY,
-      }))));
-      formData.append("object", JSON.stringify(objects));
 
-      await axios.post("http://localhost:8080/room/diagram", formData, {
-        headers: {
-          Authorization: `Bearer ${JSON.parse(token)}`,
-          "Content-Type": "multipart/form-data"
-        },
-      });
-
-      // Show success message or handle response
-    } catch (error) {
-      console.error("Error saving diagram:", error);
-    }
-  };
 
   const fetchDataUser = async (authentication) => {
     try {
@@ -265,10 +227,7 @@ const SeatManagement = () => {
     }
   }, [id]);
 
-  const handleColor = (newColor) => {
-    setColor(newColor)
-    handleUpdateObject(objected.id, { color: newColor.hex })
-  }
+
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -420,10 +379,6 @@ const SeatManagement = () => {
               showImage={showImage}
               diagramUrl={previewUrl}
               onAddObject={handleAddObject}
-              onSetNameObject={handleSetNameObject}
-              onUpdateObject={handleUpdateObject}
-              objects={objects}
-              onDeleteObject={handleDeleteObject}
               users={users}
               userAssign={userAssign}
               onAssign={handleAssign}
@@ -466,7 +421,7 @@ const SeatManagement = () => {
         <div className="min-w-[500px] p-3">
 
           <form
-            onSubmit={handleSubmit(onSubmit)}
+            onSubmit={handleSubmit(createSeat)}
             className="flex flex-col gap-4"
           >
             <div className="flex flex-col gap-1">

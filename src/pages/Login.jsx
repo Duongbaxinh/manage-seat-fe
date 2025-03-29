@@ -26,7 +26,7 @@ const Login = ({ onLogin }) => {
       }
       storeToken(data.result.accessToken)
       login(user)
-      await sendMessage(JSON.stringify({ type: "auth", userId: user.id, role: user.role }))
+      await sendMessage(JSON.stringify({ type: "auth", username: user.username, role: user.role }))
       navigate(`/seat-management/${user.room}`);
     } else {
       navigate("/");
