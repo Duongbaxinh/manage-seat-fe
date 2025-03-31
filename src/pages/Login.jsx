@@ -1,18 +1,18 @@
-import axios from "axios";
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/auth.context";
-import { useWebSocketContext } from "../context/websoket.context";
+import axios from 'axios';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/auth.context';
+import { useWebSocketContext } from '../context/websoket.context';
 
 const Login = ({ onLogin }) => {
-  const { login, storeToken } = useAuth()
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const { sendJsonMessage, sendMessage } = useWebSocketContext();
+  const { login, storeToken } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { sendMessage } = useWebSocketContext();
   const navigate = useNavigate();
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { data } = await axios.post("http://localhost:8080/auth/login", {
+    const { data } = await axios.post('http://localhost:8080/auth/login', {
       username: email,
       password: password,
     });
@@ -22,16 +22,15 @@ const Login = ({ onLogin }) => {
         id: data.result.id,
         username: data.result.username,
         room: data.result.room,
-        role: data.result.role
-      }
-      storeToken(data.result.accessToken)
-      login(user)
-      await sendMessage(JSON.stringify({ type: "auth", username: user.username, role: user.role }))
+        role: data.result.role,
+      };
+      storeToken(data.result.accessToken);
+      login(user);
+      await sendMessage(JSON.stringify({ type: 'auth', username: user.username, role: user.role }));
       navigate(`/seat-management/${user.room}`);
     } else {
-      navigate("/");
+      navigate('/');
     }
-
   };
 
   return (
@@ -39,14 +38,12 @@ const Login = ({ onLogin }) => {
       className="min-h-screen flex items-center justify-center bg-cover bg-center"
       style={{
         backgroundImage:
-          "url(https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-1.2.1&auto=format&fit=crop&w=2000&q=80)",
+          'url(https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-1.2.1&auto=format&fit=crop&w=2000&q=80)',
       }}
     >
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
         <h1 className="text-3xl font-bold text-center mb-2">Access Account</h1>
-        <p className="text-center text-gray-600 mb-6">
-          Please log in to continue
-        </p>
+        <p className="text-center text-gray-600 mb-6">Please log in to continue</p>
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
@@ -102,10 +99,7 @@ const Login = ({ onLogin }) => {
           </div>
 
           <div className="text-right mt-2">
-            <button
-              type="button"
-              className="text-blue-500 text-sm hover:underline"
-            >
+            <button type="button" className="text-blue-500 text-sm hover:underline">
               Forgot your password?
             </button>
           </div>
@@ -119,7 +113,7 @@ const Login = ({ onLogin }) => {
         </form>
 
         <div className="text-center mt-4">
-          <span className="text-gray-600">Need to create an account?</span>{" "}
+          <span className="text-gray-600">Need to create an account?</span>{' '}
           <button type="button" className="text-blue-500 hover:underline">
             Sign Up
           </button>

@@ -9,6 +9,7 @@ import RoomManage from "./pages/RoomManage";
 import SeatManagement from "./pages/SeatManagement";
 import { ROLES } from "./utils/permission";
 import ApprovingDiagram from "./pages/ApprovingDiagram";
+import ViewDraftDiagram from "./pages/ViewDiagramDraft";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         >
           <Route path="/room-management" element={<RoomManage />} />
           <Route path="/approving-diagram" element={<ApprovingDiagram />} />
+          <Route path="/view-diagram/:id" element={<ViewDraftDiagram />} />
         </Route>
         <Route path="/seat-management/:id" element={<SeatManagement />} />
         <Route path="/error" element={<NotFound />} />

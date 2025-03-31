@@ -42,7 +42,6 @@ function Object({
     };
 
     useKeyboardShortcuts((action, type) => {
-        console.log(`${action} ${type}`)
         if (action === "shift" && type === "keydown") setIsOY(true);
         if (action === "shift" && type === "keyup") setIsOY(false);
         if (action === "ctrl+shift" && type === "keydown") setIsOX(true);

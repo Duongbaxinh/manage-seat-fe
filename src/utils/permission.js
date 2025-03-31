@@ -13,8 +13,6 @@ export const ROLE_PERMISSIONS = {
 export const permission = (user, hasRole, owner = null) => {
   const permissions = ROLE_PERMISSIONS[user.role] || [];
   if (permissions.includes("all")) return true;
-  console.log("owner", owner?.id, "user", user.id);
-  console.log("owner", owner?.id === user?.id);
   if (owner) {
     return user.id === owner.id;
   }

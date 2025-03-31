@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Rnd } from "react-rnd";
-import { CancelIcon } from "../../../icons";
-import Seat from "./Seat";
-import Object from "./Object";
 import { useSeatContext } from "../../../context/seat.context";
+import Object from "./Object";
+import Seat from "./Seat";
 
 const RoomDiagram = (
     {
@@ -11,7 +9,6 @@ const RoomDiagram = (
         permissionAction,
         users,
         onSetSeatPosition,
-        onAddObject,
         onUpdateObject,
         onUnAssign,
         onAssign,
@@ -24,13 +21,11 @@ const RoomDiagram = (
         setSeatAssign,
         onReset,
         refObject,
-        setObjected
     }) => {
     const { objects } = useSeatContext()
     const [option, setOption] = useState(null);
     const [isAssign, setIsAssign] = useState(false);
     const [isReAssign, setIsReAssign] = useState(false);
-    const [objectCopy, setObjectCopy] = useState(null)
     const [isDrag, setIsDrag] = useState(null)
     const { widthRoom, heightRoom } = useMemo(() => {
         const objectMaxX = objects.length > 0 ? Math.max(...objects.map(o => o.posX + o.width + 100)) : 0;
@@ -53,24 +48,7 @@ const RoomDiagram = (
         }
     };
 
-    const handleCopyOrPaste = (e, object) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === "c") {
-            setObjectCopy(() => object)
-            e.preventDefault();
-        }
-        if ((e.ctrlKey || e.metaKey) && e.key === "v") {
-            console.log("Paste event detected", object);
-            if (!objectCopy) {
-                return
-            }
-            onAddObject({ ...object, id: Date.now(), posX: (objectCopy.posX + 10) })
-
-            e.preventDefault();
-        }
-    };
     useEffect(() => {
-        console.log("check with", widthRoom)
-        console.log("check with", heightRoom)
     }, [widthRoom, heightRoom])
 
 
@@ -91,7 +69,6 @@ const RoomDiagram = (
                         permissionAction={permissionAction}
                         refObject={refObject}
                         setIsDrag={setIsDrag}
-                        setObjected={setObjected}
                         key={object.id}
                     />
 

@@ -1,9 +1,11 @@
-import React, { createContext, useContext, useEffect } from "react";
+import React, { createContext, useContext, useState } from "react";
 import useWebSocket from "react-use-websocket";
 
 const WebSocketContext = createContext(null);
 
 export const WebSocketProvider = ({ children }) => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const [approving, setApproving] = useState(0)
     const { sendMessage,
         sendJsonMessage,
         lastMessage,
@@ -14,11 +16,15 @@ export const WebSocketProvider = ({ children }) => {
             {
                 shouldReconnect: () => true,
                 reconnectInterval: 3000,
+                onOpen: () => {
+                    if (user) {
+                        sendMessage(JSON.stringify({ type: "auth", username: user.username, role: user.role }))
+                    }
+                    console.log("WebSocket connection opened")
+                },
+                onClose: () => console.log("WebSocket connection closed"),
             }
         );
-    useEffect(() => {
-        console.log("check role message", lastJsonMessage)
-    }, [lastJsonMessage])
     return (
         <WebSocketContext.Provider value={{
             sendMessage,
@@ -26,7 +32,9 @@ export const WebSocketProvider = ({ children }) => {
             lastMessage,
             lastJsonMessage,
             readyState,
-            getWebSocket
+            getWebSocket,
+            approving,
+            setApproving,
         }}>
             {children}
         </WebSocketContext.Provider>
