@@ -1,31 +1,39 @@
 import axios from 'axios';
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { MdAnalytics } from 'react-icons/md';
 import { Link } from 'react-router-dom';
 import { useNoticeContext } from '../context/notice.context';
 import { DeleteIcon, EditIcon } from '../icons';
+import LoadingProgress from '../components/atom/LoadingProgress';
+import { handleAxiosError } from '../utils/handleError';
+import LoadingPage from './LoadingPage';
 
 const ApprovingDiagram = () => {
     const { diagrams, setDiagrams } = useNoticeContext();
+    const [loading, setLoading] = useState(false)
 
     const handleDelete = async (id) => {
         if (window.confirm('Bạn có chắc chắn muốn xóa?')) {
+            setLoading(true)
             const token = localStorage.getItem('accessToken');
             try {
                 await axios.delete(`https://seatment-app-be-v2.onrender.com/diagram/${id}`, {
                     headers: { Authorization: `Bearer ${JSON.parse(token)}` },
                 });
                 setDiagrams(diagrams.filter((diagram) => diagram.id !== id));
+                setLoading(false)
             } catch (error) {
-                console.error('Error deleting diagram:', error);
+                setLoading(false)
+                handleAxiosError(error)
             }
         }
     };
-    if (!diagrams) return <h1>Loading...</h1>
+    if (loading) return <LoadingPage loading={loading} />
     console.log(diagrams);
     return (
         <div className="p-5">
+            {/* <LoadingProgress loading={loading} /> */}
             {diagrams && diagrams.length > 0 && (
                 <div className="bg-white shadow rounded-lg  max-h-[700vh] overflow-auto">
                     <table className="min-w-full divide-y divide-gray-200">

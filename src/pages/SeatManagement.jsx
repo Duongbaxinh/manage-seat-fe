@@ -1,22 +1,23 @@
-import axios from 'axios';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { SketchPicker } from 'react-color';
 import { useForm } from 'react-hook-form';
-import { BiArrowBack, BiArrowFromLeft, BiPlus, BiSave, BiUpload } from 'react-icons/bi';
+import { BiArrowBack, BiArrowFromLeft, BiPlus, BiUpload } from 'react-icons/bi';
 import { BsEye, BsEyeSlash } from 'react-icons/bs';
 import { useParams } from 'react-router-dom';
+import LoadingProgress from '../components/atom/LoadingProgress';
 import Popup from '../components/atom/Popup';
 import RoomDiagram from '../components/molecules/RoomDiagram';
 import SeatList from '../components/molecules/SeatList';
 import { useAuth } from '../context/auth.context';
-import { useSeatContext } from '../context/seat.context';
 import { useWebSocketContext } from '../context/websoket.context';
 import useConfirmReload from '../hooks/useConfirmReload';
 import useSaveLocalStorage from '../hooks/useSaveLocalStorage';
 import Header from '../layout/Header';
-import { permission, ROLES } from '../utils/permission';
-import { handleAxiosError } from '../utils/handleError';
-import { type } from '@testing-library/user-event/dist/type';
+import DetailRoomService from '../services/room.service';
+import useSeat from '../services/seat.service';
+import { permission } from '../utils/permission';
+import LoadingPage from './LoadingPage';
+import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts';
 
 const OBJECT_NEW = {
   id: Date.now(),
@@ -29,32 +30,55 @@ const OBJECT_NEW = {
   rotation: 0,
 };
 const SeatManagement = () => {
-  const { setObjects, objects, objected } = useSeatContext();
+  const { id } = useParams();
+  const { previewUrl,
+    seats,
+    roomInfo,
+    owner,
+    loading,
+    users,
+    teams,
+    loadingProgress,
+    setSeats,
+    setFile,
+    setPreviewUrl,
+    setRoomInfo,
+    getDetailRoom,
+    handleSaveDiagram } = DetailRoomService(id);
+
+  const { isOpen,
+    userAssign,
+    seatAssign,
+    color,
+    // use set
+    setIsOpen,
+    createSeat,
+    setUserAssign,
+    setSeatAssign,
+    // handle seat
+    handleSetSeatPosition,
+    handleResetSeat,
+    handleUnassignSeat,
+    handleAssign,
+    handleReAssign,
+    handleUnAssign,
+    // handle object
+    handleAddObject,
+    handleDeleteObject,
+    handleUpdateObject,
+    handleColor, } = useSeat(id)
+
   const { sendMessage, lastJsonMessage } = useWebSocketContext();
   const { getUser } = useAuth();
-  const [userAssign, setUserAssign] = useState(null);
-  const [seatAssign, setSeatAssign] = useState(null);
-  const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [seats, setSeats] = useState([]);
-  const [filter, setFilter] = useState({
-    page: 0,
-    limit: 10,
-    type: "TEMPORARY",
-    isOccupied: true
-  })
-  const [roomInfo, setRoomInfo] = useState(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const [users, setUser] = useState([]);
-  const [teams, setTeams] = useState([]);
-  const [owner, setOwner] = useState(null);
+
   const [showImage, setShowImage] = useSaveLocalStorage('showImage', false);
   const [showListSeat, setShowListSeat] = useSaveLocalStorage('showListSeat', false);
-  const [assign, setAssign] = useState(false);
-  const [color, setColor] = useState('#ff0000');
+
+
   const refObject = useRef(null);
   const refColor = useRef(null);
-  const { id } = useParams();
+
+
   const {
     register,
     handleSubmit,
@@ -63,49 +87,6 @@ const SeatManagement = () => {
   } = useForm();
 
   useConfirmReload();
-  const createSeat = async (data) => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      const authentication = {
-        headers: {
-          Authorization: `Bearer ${JSON.parse(token)}`,
-        },
-      };
-
-      if (data.userId && (data.userId === null || users.length === 0)) {
-        delete data.userId;
-      }
-      await axios.post(
-        'https://seatment-app-be-v2.onrender.com/seat',
-        {
-          ...data,
-          roomId: id,
-          posX: 0,
-          posY: 0,
-        },
-        authentication
-      );
-      await fetchData(authentication);
-      setIsOpen(false);
-      reset();
-    } catch (error) {
-      handleAxiosError(error)
-    }
-  };
-
-  const handleSetSeatPosition = (seatId, position) => {
-    setSeats((prevSeats) =>
-      prevSeats.map((seat) =>
-        seat.id === seatId
-          ? {
-            ...seat,
-            posX: position.x,
-            posY: position.y,
-          }
-          : seat
-      )
-    );
-  };
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -117,203 +98,15 @@ const SeatManagement = () => {
     }
   };
 
-  const handleResetSeat = (seatId) => {
-    setSeats((prevSeats) =>
-      prevSeats.map((seat) => (seat.id === seatId ? { ...seat, posX: 0, posY: 0 } : seat))
-    );
-  };
-
-  const handleUnassignSeat = (seatId) => {
-    setSeats((prevSeats) =>
-      prevSeats.map((seat) => {
-        if (seat.id === seatId) {
-          return {
-            ...seat,
-            posX: 0,
-            posY: 0,
-          };
-        }
-        return seat;
-      })
-    );
-  };
-
-  const handleAssign = async (seatId, userId) => {
-    const token = localStorage.getItem('accessToken');
-    await axios.put(
-      'https://seatment-app-be-v2.onrender.com/seat/assign',
-      {
-        seatId: seatId,
-        userId: userId,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${JSON.parse(token)}`,
-        },
-      }
-    );
-    fetchDataUser({
-      headers: {
-        Authorization: `Bearer ${JSON.parse(token)}`,
-      },
-    });
-  };
-
-  const handleReAssign = async (newSeatId, oldSeatId, userId) => {
-    const token = localStorage.getItem('accessToken');
-    await axios.put(
-      'https://seatment-app-be-v2.onrender.com/seat/reassign',
-      {
-        newSeatId: newSeatId,
-        oldSeatId: oldSeatId,
-        userId: userId,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${JSON.parse(token)}`,
-        },
-      }
-    );
-    fetchDataUser({
-      headers: {
-        Authorization: `Bearer ${JSON.parse(token)}`,
-      },
-    });
-  };
-
-  const handleUnAssign = async (seatId) => {
-    if (window.confirm('Are you sure unAssign?')) {
-      const token = localStorage.getItem('accessToken');
-      await axios.get(`https://seatment-app-be-v2.onrender.com/seat/unassign/${seatId}`, {
-        headers: {
-          Authorization: `Bearer ${JSON.parse(token)}`,
-        },
-      });
-      fetchDataUser({
-        headers: {
-          Authorization: `Bearer ${JSON.parse(token)}`,
-        },
-      });
-    }
-  };
-
-  const handleSaveDiagram = async () => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      const formData = new FormData();
-      formData.append('roomId', id);
-      if (file) formData.append('image', file);
-      formData.append('seats', JSON.stringify(seats));
-      formData.append('name', roomInfo.name);
-      formData.append('floor', roomInfo.floor);
-      formData.append('hall', roomInfo.hall);
-
-      formData.append('object', JSON.stringify(objects));
-
-      await axios.post('https://seatment-app-be-v2.onrender.com/room/save/diagram', formData, {
-        headers: {
-          Authorization: `Bearer ${JSON.parse(token)}`,
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-    } catch (error) {
-      console.error('Error saving diagram:', error);
-    }
-  };
-
-  const handleAddObject = (newObject) => {
-    setObjects((prev) => [...prev, newObject]);
-  };
-
-  const handleUpdateObject = (objectId, updates) => {
-    setObjects((prev) =>
-      prev.map((item) => (item.id === objectId ? { ...item, ...updates } : item))
-    );
-  };
-
-  const handleDeleteObject = (objectId) => {
-    setObjects((prev) => prev.filter((item) => item.id !== objectId));
-  };
-
-  const fetchDataUser = async (authentication) => {
-    try {
-      if (!id) return;
-      const userResponse = await axios.get(
-        `https://seatment-app-be-v2.onrender.com/room/users/${id}`,
-        authentication
-      );
-      setUser(userResponse.data.result);
-    } catch (error) {
-      handleAxiosError(error)
-    }
-  };
-  const fetchDataTeam = async (authentication) => {
-    try {
-      if (!id) return;
-      const teamRes = await axios.get(
-        `https://seatment-app-be-v2.onrender.com/team`,
-        authentication
-      );
-      setTeams(teamRes.data.result);
-    } catch (error) {
-      handleAxiosError(error)
-    }
-  };
-  const fetchData = useCallback(
-    async (authentication) => {
-      try {
-        const [roomResponse] = await Promise.all([
-          // axios.get(`https://seatment-app-be-v2.onrender.com/room/view?roomId=${id}&pageNumber=${filter.page}&pageSize=${filter.limit}&typeSeat=${filter.type}&isOccupied=${filter.isOccupied}`, authentication),
-          axios.get(`https://seatment-app-be-v2.onrender.com/room/view/${id}`, authentication),
-
-        ]);
-        console.log('check', roomResponse.data.result);
-        setPreviewUrl(roomResponse.data.result.image);
-        setOwner(roomResponse.data.result.chief);
-        setSeats(roomResponse.data.result.seats);
-        setObjects(JSON.parse(roomResponse.data.result.object) ?? []);
-        setRoomInfo({
-          name: roomResponse.data.result.name,
-          floor: roomResponse.data.result.floor,
-          hall: roomResponse.data.result.hall,
-          seatAvailable: roomResponse.data.result.seatAvailable,
-          capacity: roomResponse.data.result.capacity,
-          usersCount: roomResponse.data.result.usersCount
-        });
-      } catch (error) {
-        handleAxiosError(error)
-      }
-    },
-    [id]
-  );
-
-  const handleColor = (newColor) => {
-    if (!objected) return
-    setColor(newColor);
-    handleUpdateObject(objected.id, { color: newColor.hex });
-  };
-
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    const authentication = {
-      headers: {
-        Authorization: `Bearer ${JSON.parse(token)}`,
-      },
-    };
     sendMessage(JSON.stringify({ type: 'join', value: id.toString() }));
-    fetchData(authentication);
-    fetchDataUser(authentication);
-    fetchDataTeam(authentication)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+  }, [id, sendMessage])
   useEffect(() => {
     if (!lastJsonMessage) return;
     const token = localStorage.getItem('accessToken');
     const authentication = {
       headers: { Authorization: `Bearer ${JSON.parse(token)}` },
     };
-
     const { type, data } = lastJsonMessage;
     switch (type) {
       case 'seatUpdate':
@@ -362,25 +155,29 @@ const SeatManagement = () => {
 
       case 'approve':
         alert(permission(getUser(), 'update:seat', owner) ? data.message : "Layout has been changed");
-        fetchData(authentication);
+        getDetailRoom(authentication);
         break;
 
       case 'saveDiagram':
         alert(data.message);
-        fetchData(authentication);
+        getDetailRoom(authentication);
         break;
 
       case 'reject':
         alert(permission(getUser(), 'update:seat', owner) ? data.message : "Layout has been changed");
-        fetchData(authentication);
+        getDetailRoom(authentication);
         break;
       default:
         console.warn('Unknown message type:', type);
     }
-  }, [fetchData, lastJsonMessage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastJsonMessage]);
+
+  if (loading) return <LoadingPage loading={loading} />
 
   return (
     <div className="w-full mx-auto px-4 pt-6 pb-0">
+      <LoadingProgress loading={loadingProgress} />
       <Header />
       {roomInfo && (
         <div className="flex items-center justify-between">
@@ -485,7 +282,7 @@ const SeatManagement = () => {
             />
           </div>
 
-          <div className=" sticky top-0   h-[100vh] p-2 bg-white">
+          <div className=" sticky top-0 h-[100vh] p-2 bg-white">
             {showListSeat ?
               <button className="p-2 cursor-pointer " onClick={() => setShowListSeat(false)} >
                 <BiArrowFromLeft />
@@ -556,7 +353,7 @@ const SeatManagement = () => {
                     <input
                       type="checkbox"
                       onChange={(e) => {
-                        setAssign(e.target.checked);
+
                       }}
                     />
                   </div>

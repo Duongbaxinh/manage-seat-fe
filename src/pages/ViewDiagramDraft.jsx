@@ -9,6 +9,8 @@ import { useAuth } from '../context/auth.context';
 import { useNoticeContext } from '../context/notice.context';
 import useSaveLocalStorage from '../hooks/useSaveLocalStorage';
 import { permission } from '../utils/permission';
+import { handleAxiosError } from '../utils/handleError';
+import LoadingProgress from '../components/atom/LoadingProgress';
 
 const OBJECT_NEW = {
     id: Date.now(),
@@ -23,7 +25,7 @@ const OBJECT_NEW = {
 const ViewDraftDiagram = () => {
     const { getUser } = useAuth();
     const { requestApprove, setRequestApprove, diagrams, setDiagrams } = useNoticeContext();
-
+    const [loading, setLoading] = useState(false)
     const [previewUrl, setPreviewUrl] = useState('');
     const [seats, setSeats] = useState([]);
     const [roomInfo, setRoomInfo] = useState(null);
@@ -38,6 +40,7 @@ const ViewDraftDiagram = () => {
         navigate(`/view-diagram/${newId}`, { replace: true });
     };
     const handleApproving = async () => {
+        setLoading(true)
         const token = localStorage.getItem('accessToken');
         await axios
             .get(`https://seatment-app-be-v2.onrender.com/room/diagram/approving/${id}`, {
@@ -48,16 +51,20 @@ const ViewDraftDiagram = () => {
                     alert('Approving success');
                     setDiagrams((prev) => prev.filter((diagram) => diagram.roomId !== id));
                     setRequestApprove(requestApprove - 1);
+                    setLoading(false)
                     navigate('/approving-diagram')
                 } else {
+                    setLoading(false)
                     alert('Approving failed');
                 }
             })
             .catch((err) => {
-                alert(err.message);
+                setLoading(false)
+                handleAxiosError(err)
             });
     };
     const handleRejecting = async () => {
+        setLoading(true)
         const token = localStorage.getItem('accessToken');
         await axios
             .get(`https://seatment-app-be-v2.onrender.com/room/diagram/rejecting/${id}`, {
@@ -70,11 +77,13 @@ const ViewDraftDiagram = () => {
                     setRequestApprove(requestApprove - 1);
                     navigate('/approving-diagram');
                 } else {
+                    setLoading(false)
                     alert('Reject failed');
                 }
             })
             .catch((err) => {
-                alert(err.message);
+                setLoading(false)
+                handleAxiosError(err)
             });
     };
 
@@ -128,6 +137,7 @@ const ViewDraftDiagram = () => {
     const filterSeat = seats ? seats.filter((seat) => seat.posX !== 0 && seat.posY !== 0) : [];
     return (
         <div className="w-full mx-auto px-4 py-6">
+            <LoadingProgress loading={loading} />
             {roomInfo && (
                 <div className="flex items-center justify-start gap-3  bg-white px-7 py-3 mt-2">
                     <h1 className="text-[14px] font-semibold text-gray-700 uppercase">{roomInfo.name} - </h1>
@@ -136,8 +146,8 @@ const ViewDraftDiagram = () => {
                 </div>
             )}
             <div className="rounded-lg shadow-sm mt-6">
-                <div className="flex gap-3 w-full ">
-                    <div className=" sticky top-0 flex flex-col gap-2 justify-start items-start mb-6  h-[90vh] p-2 bg-white text-white">
+                <div className="grid grid-cols-6 w-full ">
+                    <div className=" col-span-1 sticky top-0 flex flex-col gap-2 justify-start items-start mb-6  h-[90vh] p-2 bg-white text-white">
                         {previewUrl && (
                             <button
                                 className={`${!showImage ? 'bg-red-400' : 'bg-green-400'
@@ -176,7 +186,7 @@ const ViewDraftDiagram = () => {
                         )}
                     </div>
 
-                    <div style={{ border: '1px solid blue' }} className="flex-grow overflow-auto py-10">
+                    <div style={{ border: '1px solid blue' }} className="col-span-4 overflow-auto py-10">
                         <div
                             style={{ minWidth: ` ${Number(widthRoom)}px`, minHeight: ` ${Number(heightRoom)}px` }}
                             className="min-w-max  h-full min-h-screen bg-gray-300 "
@@ -250,7 +260,7 @@ const ViewDraftDiagram = () => {
                             </div>
                         </div>
                     </div>
-                    <div className=" sticky top-0  min-w-[200px]  h-[90vh] p-2 bg-white">
+                    <div className=" col-span-1 sticky top-0  min-w-[200px]  h-[90vh] p-2 bg-white">
                         {diagrams.length > 0 && diagrams.map((diag, index) =>
                             <div key={index} onClick={() => changeIdInUrl(diag.roomId)} className="px-3 py-2 text-black">
                                 diagram {index}

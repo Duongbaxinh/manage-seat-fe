@@ -4,9 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/auth.context';
 import { useWebSocketContext } from '../context/websoket.context';
 import { handleAxiosError } from '../utils/handleError';
-
+import ReactLoading from 'react-loading';
+import { ClipLoader } from 'react-spinners';
+import LoadingPage from './LoadingPage';
 const Login = ({ onLogin }) => {
   const { login, storeToken } = useAuth();
+  const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { sendMessage } = useWebSocketContext();
@@ -15,6 +18,7 @@ const Login = ({ onLogin }) => {
     e.preventDefault();
 
     try {
+      setLoading(true)
       const { data } = await axios.post('https://seatment-app-be-v2.onrender.com/auth/login', {
         username: email,
         password: password,
@@ -33,16 +37,18 @@ const Login = ({ onLogin }) => {
 
         await sendMessage(JSON.stringify({ type: 'auth', username: user.username, role: user.role }));
         navigate(`/seat-management/${user.room}`);
+        setLoading(false)
       } else {
+        setLoading(false)
         alert("Login failed! Invalid response from server.");
         navigate('/');
       }
     } catch (error) {
+      setLoading(false)
       handleAxiosError(error);
     }
   };
-
-
+  if (loading) return <LoadingPage loading={loading} />
   return (
     <div
       className="min-h-screen flex items-center justify-center bg-cover bg-center"

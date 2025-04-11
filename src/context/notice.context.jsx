@@ -25,7 +25,6 @@ export const NoticeProvider = ({ children }) => {
         fetchData();
         switch (lastJsonMessage?.type) {
             case "approve":
-
                 break;
             case "reject":
                 setRequestApprove(requestApprove - 1)
@@ -37,7 +36,8 @@ export const NoticeProvider = ({ children }) => {
                 break;
         }
         console.log("fetchData", lastJsonMessage)
-    }, [lastJsonMessage, requestApprove]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [lastJsonMessage]);
     console.log("diagrams", diagrams)
     console.log("requestApprove", lastJsonMessage?.data)
     return (

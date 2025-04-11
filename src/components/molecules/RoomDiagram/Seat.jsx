@@ -29,11 +29,14 @@ const Seat = ({
 }) => {
   const optionRef = useRef(null);
   const refMenu = useRef(null)
+
+
   const handleCancel = () => {
     setIsAssign(false);
     setUserAssign(null);
     setSeatAssign(null);
     setIsReAssign(false);
+    onSeatOption(null)
   };
 
   const handleClickRight = (e) => {
@@ -42,7 +45,7 @@ const Seat = ({
   };
 
   useClickOutside([optionRef, refMenu], () => {
-    onSeatOption(null);
+    handleCancel()
   });
 
 
@@ -106,7 +109,7 @@ const Seat = ({
                     <select
                       value={seatAssign}
                       onChange={(e) => setSeatAssign(e.target.value)}
-                      className="w-full px-1 py-0 m-0"
+                      className="w-full p-2 border-0 rounded-md outline-none px-2 py-1 shadow-md text-[13px] "
                     >
                       <option value="">Select Seat</option>
                       {seatAvailable.map((sa) => (
@@ -128,16 +131,18 @@ const Seat = ({
                 )}
                 {permissionAction && (
                   <div className="flex flex-col gap-2">
-                    <button
-                      onClick={() => setIsReAssign(true)}
-                      className="px-[5px] rounded-sm bg-green-400 text-white"
-                    >
-                      Reassign
-                    </button>
+                    {!isReAssign && (
+                      <button
+                        onClick={() => setIsReAssign(true)}
+                        className="py-2 rounded-sm bg-green-400 text-white"
+                      >
+                        Reassign
+                      </button>
+                    )}
 
                     <button
                       onClick={() => onUnAssign(seat.id)}
-                      className="px-[5px] rounded-sm bg-red-400 text-white"
+                      className="p-2 rounded-sm bg-red-400 text-white"
                     >
                       UnAssign
                     </button>
@@ -152,7 +157,7 @@ const Seat = ({
                     {isAssign && (
                       <select
                         onChange={(e) => setUserAssign(e.target.value)}
-                        className="w-full border-0 rounded-md outline-none px-2 py-1 shadow-md text-[13px]"
+                        className="w-full p-2 border-0 rounded-md outline-none px-2 py-1 shadow-md text-[13px]"
                       >
                         <option value="">Select user</option>
                         {users.map((item) => (
@@ -163,7 +168,7 @@ const Seat = ({
                     {!isAssign && (
 
                       <button
-                        className="w-full rounded-sm bg-green-400 text-white"
+                        className="w-full p-2 rounded-sm bg-green-400 text-white"
                         onClick={() => setIsAssign(true)}
                       >
                         Assign
@@ -174,6 +179,7 @@ const Seat = ({
                         onClick={() => {
                           onAssign(seat.id, userAssign);
                           setIsAssign(false);
+                          handleCancel()
                         }}
                         className="px-[5px] rounded-sm bg-green-400 text-white"
                       >
@@ -193,7 +199,7 @@ const Seat = ({
 
             <button
               onClick={() => onReset(seat.id)}
-              className=" w-full mt-2 px-[5px] rounded-sm bg-red-400 text-white"
+              className=" w-full mt-2 p-2 rounded-sm bg-red-400 text-white"
             >
               Reset
             </button>

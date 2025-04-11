@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Rnd } from 'react-rnd';
-import { useSeatContext } from '../../../context/seat.context';
+import { useObjectContext } from '../../../context/object.context';
 import useKeyboardShortcuts from '../../../hooks/useKeyboardShortcuts';
 import { CancelIcon } from '../../../icons';
 
@@ -10,13 +10,15 @@ function Object({
     setIsDrag,
     permissionAction,
     refObject,
+    isOX,
+    setIsOX,
+    isOY,
+    setIsOY
 }) {
 
-    const { handleSetNameObject, handleDeleteObject, handleUpdateObject, handleAddObject, objected, setObjected } = useSeatContext()
+    const { handleSetNameObject, handleDeleteObject, handleUpdateObject, handleAddObject, objected, setObjected } = useObjectContext()
     const [isHover, setIsHover] = useState(null)
     const [objectCopy, setObjectCopy] = useState(null)
-    const [isOY, setIsOY] = useState(false);
-    const [isOX, setIsOX] = useState(false);
 
     const handleResizeStop = (e, direction, ref, delta, position) => {
         if (!permissionAction) return;
