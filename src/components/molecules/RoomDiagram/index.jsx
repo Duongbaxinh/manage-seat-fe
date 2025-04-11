@@ -61,7 +61,7 @@ const RoomDiagram = (
             className="min-w-max  h-full min-h-screen bg-gray-300 ">
             <div className="bg-gray-100  w-full h-full relative ">
                 {diagramUrl && showImage && (<img src={diagramUrl} alt="layoutImage" className="w-full h-auto absolute min-w-[1440px] max-w-[1440px]" />)}
-                {!showImage && objects && objects.map((object) => (
+                {objects && objects.map((object) => (
                     <Object
                         isDrag={isDrag}
                         object={object}

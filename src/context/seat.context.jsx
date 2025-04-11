@@ -29,20 +29,6 @@ export const SeatProvider = ({ children }) => {
         setObjects((prev) => [...prev, newObject]);
     };
 
-    const handleCopyOrPaste = (e, object) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === "c") {
-            setObjectCopy(() => object)
-            e.preventDefault();
-        }
-        if ((e.ctrlKey || e.metaKey) && e.key === "v") {
-            if (!objectCopy) {
-                return
-            }
-            handleAddObject({ ...object, id: Date.now(), posX: (objectCopy.posX + 10) })
-
-            e.preventDefault();
-        }
-    };
     const handleColor = (newColor) => {
         setColor(newColor)
         handleUpdateObject(objected.id, { color: newColor.hex })
@@ -57,7 +43,6 @@ export const SeatProvider = ({ children }) => {
             handleSetNameObject,
             handleDeleteObject,
             handleUpdateObject,
-            handleCopyOrPaste,
             objectCopy,
             handleAddObject,
             setObjectCopy,

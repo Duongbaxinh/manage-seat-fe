@@ -25,13 +25,13 @@ const RoomManage = () => {
     const token = localStorage.getItem('accessToken');
     try {
       const [roomRes, userRes, hallRes] = await Promise.all([
-        axios.get('http://localhost:8080/room', {
+        axios.get('https://seatment-app-be-v2.onrender.com/room', {
           headers: { Authorization: `Bearer ${JSON.parse(token)}` },
         }),
-        axios.get('http://localhost:8080/user', {
+        axios.get('https://seatment-app-be-v2.onrender.com/user/notowner', {
           headers: { Authorization: `Bearer ${JSON.parse(token)}` },
         }),
-        axios.get('http://localhost:8080/hall', {
+        axios.get('https://seatment-app-be-v2.onrender.com/hall', {
           headers: { Authorization: `Bearer ${JSON.parse(token)}` },
         }),
       ]);
@@ -63,7 +63,7 @@ const RoomManage = () => {
     if (window.confirm('Bạn có chắc chắn muốn xóa?')) {
       const token = localStorage.getItem('accessToken');
       try {
-        await axios.delete(`http://localhost:8080/room/${id}`, {
+        await axios.delete(`https://seatment-app-be-v2.onrender.com/room/${id}`, {
           headers: { Authorization: `Bearer ${JSON.parse(token)}` },
         });
         setRooms(rooms.filter((room) => room.id !== id));
@@ -78,11 +78,11 @@ const RoomManage = () => {
 
     try {
       if (editingRoom) {
-        await axios.put(`http://localhost:8080/room/${editingRoom.id}`, data, {
+        await axios.put(`https://seatment-app-be-v2.onrender.com/room/${editingRoom.id}`, data, {
           headers: { Authorization: `Bearer ${JSON.parse(token)}` },
         });
       } else {
-        await axios.post('http://localhost:8080/room', data, {
+        await axios.post('https://seatment-app-be-v2.onrender.com/room', data, {
           headers: { Authorization: `Bearer ${JSON.parse(token)}` },
         });
       }

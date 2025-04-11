@@ -2,7 +2,7 @@ import axios from 'axios';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { SketchPicker } from 'react-color';
 import { useForm } from 'react-hook-form';
-import { BiPlus, BiSave, BiUpload } from 'react-icons/bi';
+import { BiArrowBack, BiArrowFromLeft, BiPlus, BiSave, BiUpload } from 'react-icons/bi';
 import { BsEye, BsEyeSlash } from 'react-icons/bs';
 import { useParams } from 'react-router-dom';
 import Popup from '../components/atom/Popup';
@@ -15,6 +15,8 @@ import useConfirmReload from '../hooks/useConfirmReload';
 import useSaveLocalStorage from '../hooks/useSaveLocalStorage';
 import Header from '../layout/Header';
 import { permission, ROLES } from '../utils/permission';
+import { handleAxiosError } from '../utils/handleError';
+import { type } from '@testing-library/user-event/dist/type';
 
 const OBJECT_NEW = {
   id: Date.now(),
@@ -35,11 +37,19 @@ const SeatManagement = () => {
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [seats, setSeats] = useState([]);
+  const [filter, setFilter] = useState({
+    page: 0,
+    limit: 10,
+    type: "TEMPORARY",
+    isOccupied: true
+  })
   const [roomInfo, setRoomInfo] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [users, setUser] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [owner, setOwner] = useState(null);
   const [showImage, setShowImage] = useSaveLocalStorage('showImage', false);
+  const [showListSeat, setShowListSeat] = useSaveLocalStorage('showListSeat', false);
   const [assign, setAssign] = useState(false);
   const [color, setColor] = useState('#ff0000');
   const refObject = useRef(null);
@@ -62,11 +72,11 @@ const SeatManagement = () => {
         },
       };
 
-      if (data.userId && (data.userId === null || !assign || users.length === 0)) {
+      if (data.userId && (data.userId === null || users.length === 0)) {
         delete data.userId;
       }
       await axios.post(
-        'http://localhost:8080/seat',
+        'https://seatment-app-be-v2.onrender.com/seat',
         {
           ...data,
           roomId: id,
@@ -79,7 +89,7 @@ const SeatManagement = () => {
       setIsOpen(false);
       reset();
     } catch (error) {
-      console.error('Error creating seat:', error);
+      handleAxiosError(error)
     }
   };
 
@@ -131,7 +141,7 @@ const SeatManagement = () => {
   const handleAssign = async (seatId, userId) => {
     const token = localStorage.getItem('accessToken');
     await axios.put(
-      'http://localhost:8080/seat/assign',
+      'https://seatment-app-be-v2.onrender.com/seat/assign',
       {
         seatId: seatId,
         userId: userId,
@@ -152,7 +162,7 @@ const SeatManagement = () => {
   const handleReAssign = async (newSeatId, oldSeatId, userId) => {
     const token = localStorage.getItem('accessToken');
     await axios.put(
-      'http://localhost:8080/seat/reassign',
+      'https://seatment-app-be-v2.onrender.com/seat/reassign',
       {
         newSeatId: newSeatId,
         oldSeatId: oldSeatId,
@@ -174,7 +184,7 @@ const SeatManagement = () => {
   const handleUnAssign = async (seatId) => {
     if (window.confirm('Are you sure unAssign?')) {
       const token = localStorage.getItem('accessToken');
-      await axios.get(`http://localhost:8080/seat/unassign/${seatId}`, {
+      await axios.get(`https://seatment-app-be-v2.onrender.com/seat/unassign/${seatId}`, {
         headers: {
           Authorization: `Bearer ${JSON.parse(token)}`,
         },
@@ -194,9 +204,13 @@ const SeatManagement = () => {
       formData.append('roomId', id);
       if (file) formData.append('image', file);
       formData.append('seats', JSON.stringify(seats));
+      formData.append('name', roomInfo.name);
+      formData.append('floor', roomInfo.floor);
+      formData.append('hall', roomInfo.hall);
+
       formData.append('object', JSON.stringify(objects));
 
-      await axios.post('http://localhost:8080/room/save/diagram', formData, {
+      await axios.post('https://seatment-app-be-v2.onrender.com/room/save/diagram', formData, {
         headers: {
           Authorization: `Bearer ${JSON.parse(token)}`,
           'Content-Type': 'multipart/form-data',
@@ -225,20 +239,33 @@ const SeatManagement = () => {
     try {
       if (!id) return;
       const userResponse = await axios.get(
-        `http://localhost:8080/room/users/${id}`,
+        `https://seatment-app-be-v2.onrender.com/room/users/${id}`,
         authentication
       );
       setUser(userResponse.data.result);
     } catch (error) {
-      alert(error.message);
+      handleAxiosError(error)
     }
   };
-
+  const fetchDataTeam = async (authentication) => {
+    try {
+      if (!id) return;
+      const teamRes = await axios.get(
+        `https://seatment-app-be-v2.onrender.com/team`,
+        authentication
+      );
+      setTeams(teamRes.data.result);
+    } catch (error) {
+      handleAxiosError(error)
+    }
+  };
   const fetchData = useCallback(
     async (authentication) => {
       try {
         const [roomResponse] = await Promise.all([
-          axios.get(`http://localhost:8080/room/view/${id}`, authentication),
+          // axios.get(`https://seatment-app-be-v2.onrender.com/room/view?roomId=${id}&pageNumber=${filter.page}&pageSize=${filter.limit}&typeSeat=${filter.type}&isOccupied=${filter.isOccupied}`, authentication),
+          axios.get(`https://seatment-app-be-v2.onrender.com/room/view/${id}`, authentication),
+
         ]);
         console.log('check', roomResponse.data.result);
         setPreviewUrl(roomResponse.data.result.image);
@@ -249,15 +276,19 @@ const SeatManagement = () => {
           name: roomResponse.data.result.name,
           floor: roomResponse.data.result.floor,
           hall: roomResponse.data.result.hall,
+          seatAvailable: roomResponse.data.result.seatAvailable,
+          capacity: roomResponse.data.result.capacity,
+          usersCount: roomResponse.data.result.usersCount
         });
       } catch (error) {
-        console.error('Error fetching data:', error);
+        handleAxiosError(error)
       }
     },
     [id]
   );
 
   const handleColor = (newColor) => {
+    if (!objected) return
     setColor(newColor);
     handleUpdateObject(objected.id, { color: newColor.hex });
   };
@@ -269,16 +300,15 @@ const SeatManagement = () => {
         Authorization: `Bearer ${JSON.parse(token)}`,
       },
     };
-
     sendMessage(JSON.stringify({ type: 'join', value: id.toString() }));
     fetchData(authentication);
     fetchDataUser(authentication);
+    fetchDataTeam(authentication)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!lastJsonMessage) return;
-
     const token = localStorage.getItem('accessToken');
     const authentication = {
       headers: { Authorization: `Bearer ${JSON.parse(token)}` },
@@ -318,6 +348,7 @@ const SeatManagement = () => {
             seat.id === data.id ? { ...seat, isOccupied: true, user: data.user } : seat
           )
         );
+        setRoomInfo(pre => ({ ...pre, seatAvailable: pre.seatAvailable - 1 }))
         break;
 
       case 'unAssignSeat':
@@ -326,10 +357,11 @@ const SeatManagement = () => {
             seat.id === data.id ? { ...seat, isOccupied: false, user: null } : seat
           )
         );
+        setRoomInfo(pre => ({ ...pre, seatAvailable: pre.seatAvailable + 1 }))
         break;
 
       case 'approve':
-        alert(data.message);
+        alert(permission(getUser(), 'update:seat', owner) ? data.message : "Layout has been changed");
         fetchData(authentication);
         break;
 
@@ -339,7 +371,7 @@ const SeatManagement = () => {
         break;
 
       case 'reject':
-        alert(data.message);
+        alert(permission(getUser(), 'update:seat', owner) ? data.message : "Layout has been changed");
         fetchData(authentication);
         break;
       default:
@@ -348,18 +380,25 @@ const SeatManagement = () => {
   }, [fetchData, lastJsonMessage]);
 
   return (
-    <div className="w-full mx-auto px-4 py-6">
+    <div className="w-full mx-auto px-4 pt-6 pb-0">
       <Header />
       {roomInfo && (
-        <div className="flex items-center justify-start gap-3  bg-white px-7 py-3 mt-2">
-          <h1 className="text-2xl font-semibold text-gray-700 uppercase">{roomInfo.name} - </h1>
-          <h1 className="text-2xl font-semibold text-gray-700 uppercase"> {roomInfo.floor} - </h1>
-          <h1 className="text-2xl font-semibold text-gray-700 uppercase"> {roomInfo.hall}</h1>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center justify-start gap-3  bg-white px-7 py-3 mt-2">
+            <h1 className="text-2xl font-semibold text-gray-700 uppercase">{roomInfo.name} - </h1>
+            <h1 className="text-2xl font-semibold text-gray-700 uppercase"> {roomInfo.floor} - </h1>
+            <h1 className="text-2xl font-semibold text-gray-700 uppercase"> {roomInfo.hall}</h1>
+          </div>
+          <div className="flex items-center justify-start gap-3  px-7  mt-2">
+            <h1 className="p-3 text-2xl font-semibold text-gray-700 uppercase bg-blue-200 rounded-sm "> <span>Total User</span>-{roomInfo.usersCount} </h1>
+            <h1 className="p-3 text-2xl font-semibold text-gray-700 uppercase bg-blue-200 rounded-sm "> <span>Total Seat</span>-{roomInfo.capacity} </h1>
+            <h1 className="p-3 text-2xl font-semibold text-gray-700 uppercase bg-green-200 rounded-sm">  <span>Seat Available </span>{roomInfo.seatAvailable}</h1>
+          </div>
         </div>
       )}
       <div className="rounded-lg shadow-sm mt-6">
         <div className="flex gap-3 w-full ">
-          <div className=" sticky top-0 flex flex-col gap-2 justify-start items-start mb-6  h-[90vh] p-2 bg-white text-white">
+          <div className=" sticky top-0 flex flex-col gap-2 justify-start items-start  h-[100vh] p-2 bg-white text-white">
             {previewUrl && (
               <button
                 className={`${!showImage ? 'bg-red-400' : 'bg-green-400'
@@ -410,6 +449,14 @@ const SeatManagement = () => {
                 <div ref={refColor} className="w-full">
                   <SketchPicker color={color} onChange={(newColor) => handleColor(newColor)} />
                 </div>
+                {teams.length > 0 && (
+                  <>
+                    <h1 className='text-black font-bold'>Teams</h1>
+                    {teams.map((team, index) => (
+                      <div key={index} className="px-3 py-2 text-white w-full text-center" style={{ backgroundColor: team.code }}>{team.name}</div>
+                    ))}
+                  </>
+                )}
               </>
             )}
           </div>
@@ -438,22 +485,30 @@ const SeatManagement = () => {
             />
           </div>
 
-          <div className=" sticky top-0  min-w-[200px]  h-[90vh] p-2 bg-white">
-            <SeatList
-              permissionAction={permission(getUser(), 'update:seat', owner)}
-              onAssign={handleAssign}
-              onUnAssign={handleUnAssign}
-              seats={seats}
-              users={users}
-              seatAvailable={seats.filter((seat) => seat.user === null)}
-              seatAssign={seatAssign}
-              setSeatAssign={setSeatAssign}
-              userAssign={userAssign}
-              setUserAssign={setUserAssign}
-              onReAssign={handleReAssign}
-              onUnassignDrop={handleUnassignSeat}
-              onAdd={() => setIsOpen(true)}
-            />
+          <div className=" sticky top-0   h-[100vh] p-2 bg-white">
+            {showListSeat ?
+              <button className="p-2 cursor-pointer " onClick={() => setShowListSeat(false)} >
+                <BiArrowFromLeft />
+              </button> :
+              <button className="p-2 cursor-pointer " onClick={() => setShowListSeat(true)} >
+                <BiArrowBack /></button>}
+            <div className={`${showListSeat ? " block" : "hidden"}  min-w-[200px]`}>
+              <SeatList
+                permissionAction={permission(getUser(), 'update:seat', owner)}
+                onAssign={handleAssign}
+                onUnAssign={handleUnAssign}
+                seats={seats}
+                users={users}
+                seatAvailable={seats.filter((seat) => seat.user === null)}
+                seatAssign={seatAssign}
+                setSeatAssign={setSeatAssign}
+                userAssign={userAssign}
+                setUserAssign={setUserAssign}
+                onReAssign={handleReAssign}
+                onUnassignDrop={handleUnassignSeat}
+                onAdd={() => setIsOpen(true)}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -506,9 +561,8 @@ const SeatManagement = () => {
                     />
                   </div>
                   <select
-                    disabled={!assign}
                     {...register('userId')}
-                    className="border-0  rounded-md outline-none px-2 py-1 shadow-md text-[13px] disabled: bg-gray-400 "
+                    className="border-0  rounded-md outline-none px-2 py-1 shadow-md text-[13px]"
                   >
                     {users.length > 0 ? (
                       users.map((user, index) => (

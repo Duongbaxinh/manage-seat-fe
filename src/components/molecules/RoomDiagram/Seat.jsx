@@ -86,7 +86,7 @@ const Seat = ({
             onContextMenu={handleClickRight}
             className="relative w-10 h-10 rounded-sm shadow-md flex items-center justify-center cursor-move hover:shadow-lg"
           >
-            {seat?.name}
+            <p className="uppercase">   {seat?.name.split('')[0]}</p>
             {isDrag === seat.id && (
               <>
                 <div className="absolute -top-[1px]  min-w-[100vw] h-[0.5px] bg-red-300 z-[99]"></div>

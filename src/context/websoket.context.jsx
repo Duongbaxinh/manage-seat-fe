@@ -12,7 +12,7 @@ export const WebSocketProvider = ({ children }) => {
         lastJsonMessage,
         readyState,
         getWebSocket } = useWebSocket(
-            "ws://localhost:8080/ws",
+            "wss://seatment-app-be-v2.onrender.com/ws",
             {
                 shouldReconnect: () => true,
                 reconnectInterval: 3000,

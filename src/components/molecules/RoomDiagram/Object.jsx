@@ -12,9 +12,9 @@ function Object({
     refObject,
 }) {
 
-    const { handleSetNameObject, handleDeleteObject, handleUpdateObject, handleCopyOrPaste, setObjected } = useSeatContext()
-
+    const { handleSetNameObject, handleDeleteObject, handleUpdateObject, handleAddObject, objected, setObjected } = useSeatContext()
     const [isHover, setIsHover] = useState(null)
+    const [objectCopy, setObjectCopy] = useState(null)
     const [isOY, setIsOY] = useState(false);
     const [isOX, setIsOX] = useState(false);
 
@@ -42,6 +42,11 @@ function Object({
     };
 
     useKeyboardShortcuts((action, type) => {
+        if (action === "copy" && type === "keydown") setObjectCopy(objected)
+        if (action === "paste" && type === "keydown") {
+            if (!objectCopy) return
+            return handleAddObject({ ...objectCopy, id: Date.now(), posX: (objectCopy.posX + 10) })
+        }
         if (action === "shift" && type === "keydown") setIsOY(true);
         if (action === "shift" && type === "keyup") setIsOY(false);
         if (action === "ctrl+shift" && type === "keydown") setIsOX(true);
@@ -68,7 +73,6 @@ function Object({
         <div
             ref={refObject}
             onMouseLeave={() => setIsHover(null)}
-            onKeyDown={(e) => handleCopyOrPaste(e, object)}
         >
             <Rnd
                 style={{ border: 0, }}
@@ -94,10 +98,13 @@ function Object({
                     onMouseEnter={() => {
                         setIsHover(object.id)
                     }}
-                    onClick={() => setObjected(object)}
                 >
-                    <input className="w-full h-full border-0 outline-none text-center uppercase bg-transparent" value={object.name}
-                        onChange={(e) => handleSetNameObject(e, object.id)} />
+                    <div className="w-full h-full flex items-center justify-center"
+                        onClick={() => setObjected(object)}
+                    >
+                        <input className="w-fit h-fit border-0 outline-none text-center uppercase bg-transparent" value={object.name}
+                            onChange={(e) => handleSetNameObject(e, object.id)} />
+                    </div>
 
                     {isDrag === object.id && (
                         <>

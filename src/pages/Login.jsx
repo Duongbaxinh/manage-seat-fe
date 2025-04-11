@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/auth.context';
 import { useWebSocketContext } from '../context/websoket.context';
+import { handleAxiosError } from '../utils/handleError';
 
 const Login = ({ onLogin }) => {
   const { login, storeToken } = useAuth();
@@ -12,26 +13,35 @@ const Login = ({ onLogin }) => {
   const navigate = useNavigate();
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { data } = await axios.post('http://localhost:8080/auth/login', {
-      username: email,
-      password: password,
-    });
 
-    if (data && data.result.accessToken) {
-      const user = {
-        id: data.result.id,
-        username: data.result.username,
-        room: data.result.room,
-        role: data.result.role,
-      };
-      storeToken(data.result.accessToken);
-      login(user);
-      await sendMessage(JSON.stringify({ type: 'auth', username: user.username, role: user.role }));
-      navigate(`/seat-management/${user.room}`);
-    } else {
-      navigate('/');
+    try {
+      const { data } = await axios.post('https://seatment-app-be-v2.onrender.com/auth/login', {
+        username: email,
+        password: password,
+      });
+
+      if (data && data.result.accessToken) {
+        const user = {
+          id: data.result.id,
+          username: data.result.username,
+          room: data.result.room,
+          role: data.result.role,
+        };
+
+        storeToken(data.result.accessToken);
+        login(user);
+
+        await sendMessage(JSON.stringify({ type: 'auth', username: user.username, role: user.role }));
+        navigate(`/seat-management/${user.room}`);
+      } else {
+        alert("Login failed! Invalid response from server.");
+        navigate('/');
+      }
+    } catch (error) {
+      handleAxiosError(error);
     }
   };
+
 
   return (
     <div

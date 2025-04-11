@@ -11,7 +11,7 @@ export const NoticeProvider = ({ children }) => {
     const fetchData = async () => {
         const token = localStorage.getItem("accessToken");
         try {
-            const diagramRes = await axios.get("http://localhost:8080/diagram/all", {
+            const diagramRes = await axios.get("https://seatment-app-be-v2.onrender.com/diagram/all", {
                 headers: { Authorization: `Bearer ${JSON.parse(token)}` },
             })
             setDiagrams(diagramRes.data);

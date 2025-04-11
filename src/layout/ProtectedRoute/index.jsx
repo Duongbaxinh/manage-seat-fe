@@ -2,9 +2,8 @@
 
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/auth.context';
-import Header from '../Header';
 
-const ProtectedRoute = ({ isHeader = true, allowedRoles }) => {
+const ProtectedRoute = ({ allowedRoles }) => {
     const { getUser } = useAuth();
     const user = getUser()
     if (!user) {
@@ -16,7 +15,6 @@ const ProtectedRoute = ({ isHeader = true, allowedRoles }) => {
     }
 
     return <>
-        {isHeader && <Header />}
         <Outlet />
     </>;
 };

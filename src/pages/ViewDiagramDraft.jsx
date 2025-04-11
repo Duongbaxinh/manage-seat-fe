@@ -1,14 +1,14 @@
 import Tippy from '@tippyjs/react';
 import axios from 'axios';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { BiPlus, BiSave, BiUpload } from 'react-icons/bi';
+import { BiPlus, BiSave } from 'react-icons/bi';
 import { BsEye, BsEyeSlash } from 'react-icons/bs';
 import { Rnd } from 'react-rnd';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/auth.context';
-import useSaveLocalStorage from '../hooks/useSaveLocalStorage';
-import { permission, ROLES } from '../utils/permission';
 import { useNoticeContext } from '../context/notice.context';
+import useSaveLocalStorage from '../hooks/useSaveLocalStorage';
+import { permission } from '../utils/permission';
 
 const OBJECT_NEW = {
     id: Date.now(),
@@ -22,21 +22,25 @@ const OBJECT_NEW = {
 };
 const ViewDraftDiagram = () => {
     const { getUser } = useAuth();
-    const { requestApprove, setRequestApprove, setDiagrams } = useNoticeContext();
+    const { requestApprove, setRequestApprove, diagrams, setDiagrams } = useNoticeContext();
+
     const [previewUrl, setPreviewUrl] = useState('');
     const [seats, setSeats] = useState([]);
     const [roomInfo, setRoomInfo] = useState(null);
     const [objects, setObjects] = useState([]);
+    const [selected, setSelected] = useState([]);
     const [showImage, setShowImage] = useSaveLocalStorage('showImage', false);
-    const [showInfoUser, setShowInfoUser] = useState(false);
+
 
     const { id } = useParams();
     const navigate = useNavigate();
-
+    const changeIdInUrl = (newId) => {
+        navigate(`/view-diagram/${newId}`, { replace: true });
+    };
     const handleApproving = async () => {
         const token = localStorage.getItem('accessToken');
         await axios
-            .get(`http://localhost:8080/room/diagram/approving/${id}`, {
+            .get(`https://seatment-app-be-v2.onrender.com/room/diagram/approving/${id}`, {
                 headers: { Authorization: `Bearer ${JSON.parse(token)}` },
             })
             .then((res) => {
@@ -44,7 +48,7 @@ const ViewDraftDiagram = () => {
                     alert('Approving success');
                     setDiagrams((prev) => prev.filter((diagram) => diagram.roomId !== id));
                     setRequestApprove(requestApprove - 1);
-                    navigate('/approving-diagram');
+                    navigate('/approving-diagram')
                 } else {
                     alert('Approving failed');
                 }
@@ -56,7 +60,7 @@ const ViewDraftDiagram = () => {
     const handleRejecting = async () => {
         const token = localStorage.getItem('accessToken');
         await axios
-            .get(`http://localhost:8080/room/diagram/rejecting/${id}`, {
+            .get(`https://seatment-app-be-v2.onrender.com/room/diagram/rejecting/${id}`, {
                 headers: { Authorization: `Bearer ${JSON.parse(token)}` },
             })
             .then((res) => {
@@ -77,24 +81,23 @@ const ViewDraftDiagram = () => {
     const { widthRoom, heightRoom } = useMemo(() => {
         const objectMaxX =
             objects.length > 0 ? Math.max(...objects.map((o) => o.posX + o.width + 100)) : 0;
-        const seatMaxX = seats.length > 0 ? Math.max(...seats.map((s) => s.posX + 300)) : 0;
+        const seatMaxX = seats && seats.length > 0 ? Math.max(...seats.map((s) => s.posX + 300)) : 0;
         const objectMayY =
             objects.length > 0 ? Math.max(...objects.map((o) => o.posY + o.height + 100)) : 0;
-        const seatMayY = seats.length > 0 ? Math.max(...seats.map((s) => s.posY + 300)) : 0;
+        const seatMayY = seats && seats.length > 0 ? Math.max(...seats.map((s) => s.posY + 300)) : 0;
 
         return {
             widthRoom: Math.max(1440, objectMaxX, seatMaxX),
             heightRoom: Math.max(1440, objectMayY, seatMayY),
         };
     }, [objects, seats]);
-
     const fetchData = useCallback(
         async (authentication) => {
             try {
                 const [roomResponse] = await Promise.all([
-                    axios.get(`http://localhost:8080/diagram/${id}`, authentication),
+                    axios.get(`https://seatment-app-be-v2.onrender.com/diagram/${id}`, authentication),
                 ]);
-
+                console.log("check room info ::: ", roomResponse.data)
                 setPreviewUrl(roomResponse.data.image ?? '');
                 setSeats(roomResponse.data.seats);
                 setObjects(JSON.parse(roomResponse.data.object) ?? []);
@@ -104,10 +107,11 @@ const ViewDraftDiagram = () => {
                     hall: roomResponse.data?.hall,
                 });
             } catch (error) {
-                console.error('Error fetching data:', error);
+                navigate("/approving-diagram")
+
             }
         },
-        [id]
+        [id, navigate]
     );
 
     useEffect(() => {
@@ -119,16 +123,16 @@ const ViewDraftDiagram = () => {
         };
 
         fetchData(authentication);
-    }, []);
+    }, [fetchData]);
 
-    const filterSeat = seats.filter((seat) => seat.posX !== 0 && seat.posY !== 0);
+    const filterSeat = seats ? seats.filter((seat) => seat.posX !== 0 && seat.posY !== 0) : [];
     return (
         <div className="w-full mx-auto px-4 py-6">
             {roomInfo && (
                 <div className="flex items-center justify-start gap-3  bg-white px-7 py-3 mt-2">
-                    <h1 className="text-2xl font-semibold text-gray-700 uppercase">{roomInfo.name} - </h1>
-                    <h1 className="text-2xl font-semibold text-gray-700 uppercase"> {roomInfo.floor} - </h1>
-                    <h1 className="text-2xl font-semibold text-gray-700 uppercase"> {roomInfo.hall}</h1>
+                    <h1 className="text-[14px] font-semibold text-gray-700 uppercase">{roomInfo.name} - </h1>
+                    <h1 className="text-[14px] font-semibold text-gray-700 uppercase"> {roomInfo.floor} - </h1>
+                    <h1 className="text-[14px] font-semibold text-gray-700 uppercase"> {roomInfo.hall}</h1>
                 </div>
             )}
             <div className="rounded-lg shadow-sm mt-6">
@@ -186,7 +190,7 @@ const ViewDraftDiagram = () => {
                                     />
                                 )}
                                 {objects.length > 0 &&
-                                    showImage &&
+
                                     objects.map((object) => (
                                         <Rnd
                                             style={{ border: 0 }}
@@ -238,7 +242,7 @@ const ViewDraftDiagram = () => {
                                                 placement="top"
                                             >
                                                 <div className="relative w-10 h-10 rounded-sm shadow-md flex items-center justify-center cursor-move hover:shadow-lg">
-                                                    {seat.name}
+                                                    <p className="uppercase">   {seat?.name.split('')[0]}</p>
                                                 </div>
                                             </Tippy>
                                         </Rnd>
@@ -246,7 +250,13 @@ const ViewDraftDiagram = () => {
                             </div>
                         </div>
                     </div>
-                    <div className=" sticky top-0  min-w-[200px]  h-[90vh] p-2 bg-white">List Diagram</div>
+                    <div className=" sticky top-0  min-w-[200px]  h-[90vh] p-2 bg-white">
+                        {diagrams.length > 0 && diagrams.map((diag, index) =>
+                            <div key={index} onClick={() => changeIdInUrl(diag.roomId)} className="px-3 py-2 text-black">
+                                diagram {index}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
