@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useSeatContext } from "../../../context/seat.context";
+import { useObjectContext } from "../../../context/object.context";
 import Object from "./Object";
 import Seat from "./Seat";
 
@@ -22,7 +22,7 @@ const RoomDiagram = (
         onReset,
         refObject,
     }) => {
-    const { objects } = useSeatContext()
+    const { objects } = useObjectContext()
     const [option, setOption] = useState(null);
     const [isAssign, setIsAssign] = useState(false);
     const [isReAssign, setIsReAssign] = useState(false);
@@ -37,13 +37,16 @@ const RoomDiagram = (
     }, [objects, seats]);
 
     const handleDrop = (e) => {
+        console.log("drop here")
         e.preventDefault();
         const seatId = e.dataTransfer.getData("seatDragId");
+
         if (!seatId) return;
         if (e.currentTarget) {
             const rect = e.currentTarget.getBoundingClientRect();
             const x = Math.max(0, Math.round(e.clientX - rect.left));
             const y = Math.max(0, Math.round(e.clientY - rect.top));
+
             onSetSeatPosition(seatId, { x, y }, true);
         }
     };
@@ -56,10 +59,15 @@ const RoomDiagram = (
     return (
         <div
             style={{ minWidth: ` ${Number(widthRoom)}px`, minHeight: ` ${Number(heightRoom)}px` }}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => handleDrop(e)}
-            className="min-w-max  h-full min-h-screen bg-gray-300 ">
-            <div className="bg-gray-100  w-full h-full relative ">
+
+
+            className="min-w-max  h-full min-h-screen !bg-gray-900 "
+
+        >
+            <div className="bg-gray-100  w-full h-full relative "
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => handleDrop(e)}
+            >
                 {diagramUrl && showImage && (<img src={diagramUrl} alt="layoutImage" className="w-full h-auto absolute min-w-[1440px] max-w-[1440px]" />)}
                 {objects && objects.map((object) => (
                     <Object

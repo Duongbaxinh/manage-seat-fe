@@ -36,6 +36,7 @@ const SeatList = ({ seats, onUnassignDrop, onAdd, onAssign, fetchDataUser, users
     };
 
 
+    console.log('check seat', seats)
     return (
         <div className={`flex flex-col h-full ${isDragOver ? "bg-blue-50" : ""} transition-colors`}
             onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
