@@ -79,7 +79,7 @@ const UserManage = () => {
     };
 
     const onSubmit = async (data) => {
-        console.log("check data user :::: ", data)
+
         const token = localStorage.getItem('accessToken');
         try {
             if (editingUser) {
@@ -111,7 +111,7 @@ const UserManage = () => {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
             >
-                <div className="min-w-[500px] p-3">
+                <div className="min-w-[600px] p-3">
                     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
                         <div className="flex flex-col gap-1">
                             <label className="text-sm font-medium text-gray-700">First Name</label>
@@ -137,24 +137,44 @@ const UserManage = () => {
                         <div className="flex flex-col gap-1">
                             <label className="text-sm font-medium text-gray-700">User Name</label>
                             <input
-                                {...register('username')}
+                                {...register('username', {
+                                    required: 'Username is required',
+                                    pattern: {
+                                        value: /^[a-zA-Z][a-zA-Z0-9]{2,19}$/,
+                                        message: 'Username must (3-20 chars)',
+                                    },
+                                })}
                                 type="text"
                                 className="border rounded-md px-2 py-1 shadow-md"
                                 placeholder="Enter username"
                             />
-                            {errors.name && <span className="text-red-500 text-sm">{errors.name.message}</span>}
+                            {errors.username && (
+                                <span className="text-red-500 text-sm">{errors.username.message}</span>
+                            )}
                         </div>
 
-                        <div className="flex flex-col gap-1">
-                            <label className="text-sm font-medium text-gray-700">Password</label>
-                            <input
-                                {...register('password')}
-                                type="text"
-                                className="border rounded-md px-2 py-1 shadow-md"
-                                placeholder="Enter password"
-                            />
-                            {errors.name && <span className="text-red-500 text-sm">{errors.name.message}</span>}
-                        </div>
+                        {!editingUser && (
+                            <div className="flex flex-col gap-1">
+                                <label className="text-sm font-medium text-gray-700">Password</label>
+                                <input
+                                    {...register('password', {
+                                        required: 'Password is required',
+                                        pattern: {
+                                            value: /^(?=.*[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])[^\s<>]{8,16}$/,
+                                            message:
+                                                'Password must be 8-16 characters, include letters, numbers, or symbols.',
+                                        },
+                                    })}
+                                    type="password"
+                                    className="border rounded-md px-2 py-1 shadow-md"
+                                    placeholder="Enter password"
+                                />
+                                {errors.password && (
+                                    <span className="text-red-500 text-sm">{errors.password.message}</span>
+                                )}
+                            </div>
+
+                        )}
 
                         <div className="flex flex-col gap-1">
                             <label className="text-sm font-medium text-gray-700">team</label>
@@ -162,7 +182,6 @@ const UserManage = () => {
                                 {...register('teamId')}
                                 className="border rounded-md px-2 py-1 shadow-md"
                             >
-                                <option value="">Select Team</option>
                                 {teams.map((team) => (
                                     <option key={team.id} value={team.id}>
                                         {team.name}{' '}
@@ -176,28 +195,41 @@ const UserManage = () => {
 
                         <div className="flex flex-col gap-1">
                             <label className="text-sm font-medium text-gray-700">Role</label>
-                            <select {...register('roleName')} className="border rounded-md px-2 py-1 shadow-md">
-                                <option value="">Select role</option>
+                            <select
+                                {...register('roleName', { required: 'Please select a role' })}
+                                className="border rounded-md px-2 py-1 shadow-md"
+                            >
+                                <option className="hidden" value="">Select role</option>
                                 {roles.map((role) => (
                                     <option key={role.name} value={role.name}>
                                         {role.name}
                                     </option>
                                 ))}
                             </select>
+                            {errors.roleName && (
+                                <span className="text-red-500 text-sm">{errors.roleName.message}</span>
+                            )}
                         </div>
 
 
                         <div className="flex flex-col gap-1">
-                            <label className="text-sm font-medium text-gray-700">Role</label>
-                            <select {...register('roomId')} className="border rounded-md px-2 py-1 shadow-md">
-                                <option value="">Select role</option>
+                            <label className="text-sm font-medium text-gray-700">Room</label>
+                            <select
+                                {...register('roomId', { required: 'Please select a room' })}
+                                className="border rounded-md px-2 py-1 shadow-md"
+                            >
+                                <option className="hidden" value="">Select room</option>
                                 {rooms.map((room) => (
                                     <option key={room.id} value={room.id}>
                                         {room.name}
                                     </option>
                                 ))}
                             </select>
+                            {errors.roomId && (
+                                <span className="text-red-500 text-sm">{errors.roomId.message}</span>
+                            )}
                         </div>
+
 
                         <div className="flex gap-2 justify-end mt-4">
                             <button

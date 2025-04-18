@@ -5,9 +5,6 @@ import Popup from "../../atom/Popup";
 
 const SeatList = ({ seats, onUnassignDrop, onAdd, onAssign, fetchDataUser, users, setUserAssign, userAssign, seatAvailable, setSeatAssign, seatAssign, onReAssign, onUnAssign, permissionAction }) => {
     const [searchQuery, setSearchQuery] = useState("");
-    const [filterSeat, setFilterSeat] = useState({
-
-    })
     const [isDragOver, setIsDragOver] = useState(false);
     const [seatDetail, setSeatDetail] = useState(null);
     const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -35,8 +32,6 @@ const SeatList = ({ seats, onUnassignDrop, onAdd, onAssign, fetchDataUser, users
         setIsDragOver(false);
     };
 
-
-    console.log('check seat', seats)
     return (
         <div className={`flex flex-col h-full ${isDragOver ? "bg-blue-50" : ""} transition-colors`}
             onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
@@ -50,12 +45,6 @@ const SeatList = ({ seats, onUnassignDrop, onAdd, onAssign, fetchDataUser, users
                             <BiPlus />
                         </button>
                     )}
-                </div>
-                <div className="flex gap-4 w-full mt-[20px]">
-                    <input className="bg-blue-200 max-w-[10px] max-h-[10px]" type="checkbox" onChange={(e) => { setFilterSeat(prev => ({ "unA": e.target.checked })) }} />
-                    <label htmlFor="" className="text-[10px]">Available</label>
-                    <input className="bg-blue-200 max-w-[10px] max-h-[10px]" type="checkbox" onChange={(e) => { setFilterSeat(prev => ({ "A": e.target.checked })) }} />
-                    <label htmlFor="" className="text-[10px]"> UnAvailable</label>
                 </div>
             </div>
 
@@ -105,7 +94,6 @@ const SeatList = ({ seats, onUnassignDrop, onAdd, onAssign, fetchDataUser, users
                                 </div>
                             }
                             <div className="flex gap-2">
-
                                 {isReAssign && seatAssign && (
                                     <button
                                         onClick={() => {

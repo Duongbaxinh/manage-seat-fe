@@ -21,7 +21,7 @@ export default function Popup({
             <div>
                 <div
                     onClick={(e) => e.stopPropagation()}
-                    className={`min-w-[200px] bg-white flex flex-col gap-[15px] max-h-[90vh] p-[10px] rounded-md ${className}`}>
+                    className={`min-w-[200px] bg-white flex flex-col gap-[15px] max-h-[90vh] p-[10px] rounded-md overflow-auto ${className}`}>
 
                     <div className="pl-2 w-full flex justify-between">
                         <p className="text-[18px] font-[700] text-text">

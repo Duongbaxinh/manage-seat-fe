@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { SketchPicker } from 'react-color';
 import { useForm } from 'react-hook-form';
-import { BiArrowBack, BiArrowFromLeft, BiPlus, BiUpload } from 'react-icons/bi';
+import { BiPlus, BiUpload } from 'react-icons/bi';
 import { BsEye, BsEyeSlash } from 'react-icons/bs';
 import { useParams } from 'react-router-dom';
 import LoadingProgress from '../components/atom/LoadingProgress';
@@ -17,7 +17,6 @@ import DetailRoomService from '../services/room.service';
 import useSeat from '../services/seat.service';
 import { permission } from '../utils/permission';
 import LoadingPage from './LoadingPage';
-import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts';
 
 const OBJECT_NEW = {
   id: Date.now(),
@@ -72,9 +71,6 @@ const SeatManagement = () => {
   const { getUser } = useAuth();
 
   const [showImage, setShowImage] = useSaveLocalStorage('showImage', false);
-  const [showListSeat, setShowListSeat] = useSaveLocalStorage('showListSeat', false);
-
-
   const refObject = useRef(null);
   const refColor = useRef(null);
 
@@ -282,14 +278,9 @@ const SeatManagement = () => {
             />
           </div>
 
-          <div className=" sticky top-0 h-[100vh] p-2 bg-white">
-            {showListSeat ?
-              <button className="p-2 cursor-pointer " onClick={() => setShowListSeat(false)} >
-                <BiArrowFromLeft />
-              </button> :
-              <button className="p-2 cursor-pointer " onClick={() => setShowListSeat(true)} >
-                <BiArrowBack /></button>}
-            <div className={`${showListSeat ? " block" : "hidden"}  min-w-[200px]`}>
+          <div className=" sticky top-0 h-[80vh] w-full max-w-[230px]  p-2 bg-white overflow-y-scroll overflow-x-visible">
+
+            <div className={`w-full`}>
               <SeatList
                 permissionAction={permission(getUser(), 'update:seat', owner)}
                 onAssign={handleAssign}
@@ -325,7 +316,6 @@ const SeatManagement = () => {
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">Description</label>
               <textarea
-                minLength={7}
                 {...register('description')}
                 className="border-0   rounded-md outline-none px-2 py-1 shadow-md text-[13px] "
                 placeholder="Enter seat description"

@@ -4,8 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/auth.context';
 import { useWebSocketContext } from '../context/websoket.context';
 import { handleAxiosError } from '../utils/handleError';
-import ReactLoading from 'react-loading';
-import { ClipLoader } from 'react-spinners';
 import LoadingPage from './LoadingPage';
 const Login = ({ onLogin }) => {
   const { login, storeToken } = useAuth();
@@ -17,8 +15,23 @@ const Login = ({ onLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const usernameRegex = /^[a-zA-Z0-9][a-zA-Z0-9_]*$/;
+    const passwordRegex = /^(?!.*<script)(?!.*<.*?>)[^\s]{6,16}$/;
+
+    if (!usernameRegex.test(email)) {
+      alert('Username must be correct format!!');
+      return;
+    }
+
+    if (!passwordRegex.test(password)) {
+      alert(
+        'Password must be 6-16 characters.'
+      );
+      return;
+    }
+
     try {
-      setLoading(true)
+      setLoading(true);
       const { data } = await axios.post('https://seatment-app-be-v2.onrender.com/auth/login', {
         username: email,
         password: password,
@@ -35,19 +48,22 @@ const Login = ({ onLogin }) => {
         storeToken(data.result.accessToken);
         login(user);
 
-        await sendMessage(JSON.stringify({ type: 'auth', username: user.username, role: user.role }));
+        await sendMessage(
+          JSON.stringify({ type: 'auth', username: user.username, role: user.role })
+        );
         navigate(`/seat-management/${user.room}`);
-        setLoading(false)
+        setLoading(false);
       } else {
-        setLoading(false)
-        alert("Login failed! Invalid response from server.");
+        setLoading(false);
+        alert('Login failed! Invalid response from server.');
         navigate('/');
       }
     } catch (error) {
-      setLoading(false)
+      setLoading(false);
       handleAxiosError(error);
     }
   };
+
   if (loading) return <LoadingPage loading={loading} />
   return (
     <div
@@ -114,11 +130,6 @@ const Login = ({ onLogin }) => {
             </div>
           </div>
 
-          <div className="text-right mt-2">
-            <button type="button" className="text-blue-500 text-sm hover:underline">
-              Forgot your password?
-            </button>
-          </div>
 
           <button
             type="submit"
@@ -128,12 +139,6 @@ const Login = ({ onLogin }) => {
           </button>
         </form>
 
-        <div className="text-center mt-4">
-          <span className="text-gray-600">Need to create an account?</span>{' '}
-          <button type="button" className="text-blue-500 hover:underline">
-            Sign Up
-          </button>
-        </div>
       </div>
     </div>
   );

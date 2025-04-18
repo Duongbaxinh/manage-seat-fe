@@ -186,7 +186,7 @@ const ViewDraftDiagram = () => {
                         )}
                     </div>
 
-                    <div style={{ border: '1px solid blue' }} className="col-span-4 overflow-auto py-10">
+                    <div style={{ border: '1px solid blue' }} className="col-span-5 overflow-auto py-10">
                         <div
                             style={{ minWidth: ` ${Number(widthRoom)}px`, minHeight: ` ${Number(heightRoom)}px` }}
                             className="min-w-max  h-full min-h-screen bg-gray-300 "
@@ -260,13 +260,7 @@ const ViewDraftDiagram = () => {
                             </div>
                         </div>
                     </div>
-                    <div className=" col-span-1 sticky top-0  min-w-[200px]  h-[90vh] p-2 bg-white">
-                        {diagrams.length > 0 && diagrams.map((diag, index) =>
-                            <div key={index} onClick={() => changeIdInUrl(diag.roomId)} className="px-3 py-2 text-black">
-                                diagram {index}
-                            </div>
-                        )}
-                    </div>
+
                 </div>
             </div>
         </div>

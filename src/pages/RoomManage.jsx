@@ -145,7 +145,7 @@ const RoomManage = () => {
 
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">User</label>
-              <select {...register('userId')} className="border rounded-md px-2 py-1 shadow-md">
+              <select {...register('userId', { required: 'User is required' })} className="border rounded-md px-2 py-1 shadow-md">
                 <option value="">Select User</option>
                 {users.map((user) => (
                   <option key={user.id} value={user.id}>
@@ -180,7 +180,7 @@ const RoomManage = () => {
           <button onClick={handleAddRoom} className="  py-2  ">
             <PiPlus />
           </button>
-          <p>Add new roomo</p>
+          <p>Add new room</p>
         </div>
       </div>
 
