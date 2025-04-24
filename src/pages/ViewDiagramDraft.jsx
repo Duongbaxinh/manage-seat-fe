@@ -1,19 +1,31 @@
-import Tippy from '@tippyjs/react';
 import axios from 'axios';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { BiPlus, BiSave } from 'react-icons/bi';
+import React, { useEffect, useRef, useState } from 'react';
+import { SketchPicker } from 'react-color';
+import { useForm } from 'react-hook-form';
 import { BsEye, BsEyeSlash } from 'react-icons/bs';
-import { Rnd } from 'react-rnd';
 import { useNavigate, useParams } from 'react-router-dom';
+import LoadingProgress from '../components/atom/LoadingProgress';
+import Popup from '../components/atom/Popup';
+import RoomDiagram from '../components/molecules/RoomDiagram';
+import SeatList from '../components/molecules/SeatList';
 import { useAuth } from '../context/auth.context';
 import { useNoticeContext } from '../context/notice.context';
+import { useObjectContext } from '../context/object.context';
+import useConfirmReload from '../hooks/useConfirmReload';
+import useGetData from '../hooks/useGetData';
 import useSaveLocalStorage from '../hooks/useSaveLocalStorage';
-import { permission } from '../utils/permission';
+import DetailRoomService from '../services/room.service';
+import useSeat from '../services/seat.service';
+import { removeSeat, unAssignSeat } from '../services/seattype.service';
 import { handleAxiosError } from '../utils/handleError';
-import LoadingProgress from '../components/atom/LoadingProgress';
+import { permission, ROLES } from '../utils/permission';
+import LoadingPage from './LoadingPage';
+import { useWebSocketContext } from '../context/websoket.context';
+import { toast } from 'react-toastify';
+import debounce from 'lodash.debounce';
 
 const OBJECT_NEW = {
-    id: Date.now(),
+    id: `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
     name: 'Object',
     color: '#9B9B9B',
     posX: 50,
@@ -22,247 +34,463 @@ const OBJECT_NEW = {
     height: 100,
     rotation: 0,
 };
+
 const ViewDraftDiagram = () => {
+    const { roomId } = useParams();
+    const { lastJsonMessage } = useWebSocketContext()
+    useConfirmReload();
+    const {
+        register,
+        handleSubmit,
+        formState: { errors },
+    } = useForm();
+    const { objects } = useObjectContext()
+    const {
+        previewUrl,
+        seats,
+        roomInfo,
+        owner,
+        loading,
+        users,
+        file,
+        userNoSeat,
+        teams,
+        loadingProgress,
+        setSeats,
+        setFile,
+        setPreviewUrl,
+        setRoomInfo,
+        getRoomLayoutRequest,
+        handleSaveDiagramRequest,
+        fetchDataUser,
+        fetchDataTeam,
+    } = DetailRoomService(roomId);
+    const {
+        isOpen,
+        userAssign,
+        seatAssign,
+        color,
+        setIsOpen,
+        setUserAssign,
+        setSeatAssign,
+        handleSetSeatPosition,
+        handleAddObject,
+        handleDeleteObject,
+        handleUpdateObject,
+        handleColor,
+    } = useSeat(roomId);
+
+    const { data: seatType, loading: loadingSeat, setData: setDataSeatType } = useGetData({
+        url: `https://seatmanage-be-v3.onrender.com/seat-type/${roomId}`,
+        authorization: true,
+    });
+
     const { getUser } = useAuth();
-    const { requestApprove, setRequestApprove, diagrams, setDiagrams } = useNoticeContext();
-    const [loading, setLoading] = useState(false)
-    const [previewUrl, setPreviewUrl] = useState('');
-    const [seats, setSeats] = useState([]);
-    const [roomInfo, setRoomInfo] = useState(null);
-    const [objects, setObjects] = useState([]);
-    const [selected, setSelected] = useState([]);
+
     const [showImage, setShowImage] = useSaveLocalStorage('showImage', false);
+    const { requestApprove, setRequestApprove, setDiagrams } = useNoticeContext();
+    const [loadingProcess, setLoadingProcess] = useState(false)
+    const refObject = useRef(null);
+    const refColor = useRef(null);
+    const navigate = useNavigate()
 
+    const handleFileChange = (e) => {
+        const selectedFile = e.target.files[0];
+        setFile(selectedFile);
 
-    const { id } = useParams();
-    const navigate = useNavigate();
-    const changeIdInUrl = (newId) => {
-        navigate(`/view-diagram/${newId}`, { replace: true });
+        if (selectedFile) {
+            const objectUrl = URL.createObjectURL(selectedFile);
+            setPreviewUrl(objectUrl);
+        }
     };
+
+    const handleRemoveBackground = () => {
+        setFile("");
+        setPreviewUrl("");
+    };
+    const handleSwitchSeat = async ({ seatSwitch, userSwitch, seatSelected }) => {
+        setSeats((prevSeats) =>
+            prevSeats.map((seat) => {
+                if (seat.id === seatSwitch.id) {
+                    return {
+                        ...seat,
+                        user: userSwitch
+                    };
+                }
+                else if (seat?.user?.id === userSwitch.id && seat.id === seatSelected) {
+                    return {
+                        ...seat,
+                        user: seatSwitch.user,
+                    };
+                } else {
+                    return seat;
+                }
+            })
+        );
+
+    }
+
+    const handleUnAssignSeat = async (seatId) => {
+        setSeats(prev => prev.map(seat => seat.id === seatId ? { ...seat, user: null } : seat))
+        setRoomInfo((pre) => ({ ...pre, seatAvailable: pre.seatAvailable + 1 }));
+    }
+
+    const handleAddSeat = async (dataSeat) => {
+        const newSeat = {
+            id: Math.random(10000),
+            name: dataSeat.name,
+            description: `description ${dataSeat.name}`,
+            typeSeat: "TEMPORARY",
+            user: null,
+            posX: dataSeat.x,
+            posY: dataSeat.y,
+            roomId: roomId,
+        }
+        // const seatNew = await addSeat(newSeat);
+        setSeats(prev => [...prev, newSeat])
+        setRoomInfo((pre) => ({
+            ...pre,
+            capacity: pre.capacity + 1,
+            seatAvailable: pre.seatAvailable + 1,
+        }));
+    };
+
+    const handleCreateTypeSeat = async (dataSeatType) => {
+        setDataSeatType((prev) => [...prev, { id: Math.random(1000), name: dataSeatType.name, roomId: roomId }]);
+    };
+
+    const handleRemoveSeat = async (seatId) => {
+
+        setSeats(prev => prev.filter(seat => seat.id !== seatId));
+        const seatRemove = seats.find(seat => seat.id === seatId)
+        const checkSeatAvailable = seatRemove.user === null || seatRemove.user === 'null'
+
+        setSeats(prev => prev.filter(seat => seat.id !== seatId));
+        setSeats((prevSeats) => prevSeats.filter((seat) => seat.id !== seatRemove.id));
+        setRoomInfo((pre) => ({ ...pre, capacity: pre.capacity - 1, seatAvailable: checkSeatAvailable ? pre.seatAvailable - 1 : pre.seatAvailable }));
+
+    }
+
+    const handleAssignSeat = async (assignData) => {
+
+        setSeats((prevSeats) =>
+            prevSeats.map((seat) =>
+                seat.id === assignData.seatId
+                    ? {
+                        ...seat, isOccupied: true,
+                        user: assignData.user,
+                        expireTime: assignData.expiration,
+                        typeSeat: assignData.typeSeat
+                    }
+                    : seat
+            ))
+        setRoomInfo((pre) => ({ ...pre, seatAvailable: pre?.seatAvailable - 1 }));
+
+    }
+
+    const handleReAssignSeat = async (reassignData) => {
+        setSeats((prevSeats) =>
+            prevSeats.map((seat) => {
+                if (seat.id === reassignData.seatId) {
+                    return {
+                        ...seat,
+                        isOccupied: true,
+                        user: { ...reassignData.newUser },
+                        expireTime: reassignData.expiration,
+                        typeSeat: reassignData.typeSeat,
+                    };
+                } else if (seat?.user?.id === reassignData.newUser.id) {
+                    if (seat.user !== null) {
+                        setRoomInfo((pre) => ({ ...pre, seatAvailable: pre?.seatAvailable + 1 }));
+                    }
+                    return {
+                        ...seat,
+                        isOccupied: false,
+                        user: null,
+                        expireTime: null,
+                        typeSeat: null,
+                    };
+                } else {
+                    return seat;
+                }
+            })
+        );
+    }
+
     const handleApproving = async () => {
-        setLoading(true)
+        setLoadingProcess(true)
         const token = localStorage.getItem('accessToken');
         await axios
-            .get(`https://seatment-app-be-v2.onrender.com/room/diagram/approving/${id}`, {
+            .get(`https://seatmanage-be-v3.onrender.com/room/diagram/approving/${roomId}`, {
                 headers: { Authorization: `Bearer ${JSON.parse(token)}` },
             })
             .then((res) => {
                 if (res.status === 200) {
                     alert('Approving success');
-                    setDiagrams((prev) => prev.filter((diagram) => diagram.roomId !== id));
+                    setDiagrams((prev) => prev.filter((diagram) => diagram.roomId !== roomId));
                     setRequestApprove(requestApprove - 1);
-                    setLoading(false)
+                    setLoadingProcess(false)
                     navigate('/approving-diagram')
                 } else {
-                    setLoading(false)
+                    setLoadingProcess(false)
                     alert('Approving failed');
                 }
             })
             .catch((err) => {
-                setLoading(false)
+                setLoadingProcess(false)
                 handleAxiosError(err)
             });
     };
+
     const handleRejecting = async () => {
-        setLoading(true)
+        setLoadingProcess(true)
         const token = localStorage.getItem('accessToken');
         await axios
-            .get(`https://seatment-app-be-v2.onrender.com/room/diagram/rejecting/${id}`, {
+            .get(`https://seatmanage-be-v3.onrender.com/room/diagram/rejecting/${roomId}`, {
                 headers: { Authorization: `Bearer ${JSON.parse(token)}` },
             })
             .then((res) => {
                 if (res.status === 200) {
-                    alert('You rejected request change layout of room ' + id);
-                    setDiagrams((prev) => prev.filter((diagram) => diagram.roomId !== id));
+                    alert('You rejected request change layout of room ' + roomId);
+                    setDiagrams((prev) => prev.filter((diagram) => diagram.roomId !== roomId));
                     setRequestApprove(requestApprove - 1);
                     navigate('/approving-diagram');
                 } else {
-                    setLoading(false)
+                    setLoadingProcess(false)
                     alert('Reject failed');
                 }
             })
             .catch((err) => {
-                setLoading(false)
+                setLoadingProcess(false)
                 handleAxiosError(err)
             });
     };
 
-    const { widthRoom, heightRoom } = useMemo(() => {
-        const objectMaxX =
-            objects.length > 0 ? Math.max(...objects.map((o) => o.posX + o.width + 100)) : 0;
-        const seatMaxX = seats && seats.length > 0 ? Math.max(...seats.map((s) => s.posX + 300)) : 0;
-        const objectMayY =
-            objects.length > 0 ? Math.max(...objects.map((o) => o.posY + o.height + 100)) : 0;
-        const seatMayY = seats && seats.length > 0 ? Math.max(...seats.map((s) => s.posY + 300)) : 0;
-
-        return {
-            widthRoom: Math.max(1440, objectMaxX, seatMaxX),
-            heightRoom: Math.max(1440, objectMayY, seatMayY),
-        };
-    }, [objects, seats]);
-    const fetchData = useCallback(
-        async (authentication) => {
-            try {
-                const [roomResponse] = await Promise.all([
-                    axios.get(`https://seatment-app-be-v2.onrender.com/diagram/${id}`, authentication),
-                ]);
-                console.log("check room info ::: ", roomResponse.data)
-                setPreviewUrl(roomResponse.data.image ?? '');
-                setSeats(roomResponse.data.seats);
-                setObjects(JSON.parse(roomResponse.data.object) ?? []);
-                setRoomInfo({
-                    name: roomResponse.data?.name,
-                    floor: roomResponse.data?.floor,
-                    hall: roomResponse.data?.hall,
-                });
-            } catch (error) {
-                navigate("/approving-diagram")
-
-            }
-        },
-        [id, navigate]
-    );
-
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
         const authentication = {
-            headers: {
-                Authorization: `Bearer ${JSON.parse(token)}`,
-            },
+            headers: { Authorization: `Bearer ${JSON.parse(token)}` },
         };
+        if (roomId) {
+            getRoomLayoutRequest(roomId)
+            fetchDataTeam(roomId, authentication)
+            fetchDataUser(roomId, false, authentication);
+            fetchDataUser(roomId, true, authentication);
+        }
 
-        fetchData(authentication);
-    }, [fetchData]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [roomId])
 
-    const filterSeat = seats ? seats.filter((seat) => seat.posX !== 0 && seat.posY !== 0) : [];
+    useEffect(() => {
+        const debouncedSave = debounce(() => {
+            handleSaveDiagramRequest(roomId);
+        }, 1500);
+
+
+        debouncedSave();
+        return () => {
+            debouncedSave.cancel();
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [seats, file, roomInfo, objects]);
+
+
+
+    useEffect(() => {
+        switch (lastJsonMessage?.type) {
+            case "switchDiagram":
+                toast(`Phòng ${lastJsonMessage.data} đang có sự điều chỉnh`)
+                navigate("/approving-diagram")
+                break;
+            default:
+                break;
+        }
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [lastJsonMessage]);
+    if (loading) return <LoadingPage loading={loading} />;
+
+
     return (
-        <div className="w-full mx-auto px-4 py-6">
-            <LoadingProgress loading={loading} />
+        <div className="w-full mx-auto px-4 pt-6 min-w-[1440px] relative">
+            <LoadingProgress loading={loadingProgress | loadingProcess} />
             {roomInfo && (
-                <div className="flex items-center justify-start gap-3  bg-white px-7 py-3 mt-2">
-                    <h1 className="text-[14px] font-semibold text-gray-700 uppercase">{roomInfo.name} - </h1>
-                    <h1 className="text-[14px] font-semibold text-gray-700 uppercase"> {roomInfo.floor} - </h1>
-                    <h1 className="text-[14px] font-semibold text-gray-700 uppercase"> {roomInfo.hall}</h1>
+                <div className="flex items-center justify-between min-w-[1440px]">
+
+                    <div className="flex items-center justify-start gap-3 bg-white px-7 py-3 mt-2">
+                        <h1 className="text-2xl font-semibold text-gray-700 uppercase">{roomInfo.name} - </h1>
+                        <h1 className="text-2xl font-semibold text-gray-700 uppercase">{roomInfo.floor} - </h1>
+                        <h1 className="text-2xl font-semibold text-gray-700 uppercase">{roomInfo.hall}</h1>
+                    </div>
+                    <div id="room-summary" className="flex items-center justify-start gap-3 px-7 mt-2">
+                        <h1 className="p-3 text-2xl font-semibold text-gray-700 uppercase bg-blue-200 rounded-sm">
+                            <span>User In Room</span>-{roomInfo.usersCount}
+                        </h1>
+                        <h1 className="p-3 text-2xl font-semibold text-gray-700 uppercase bg-blue-200 rounded-sm">
+                            <span>Total Seat</span>-{roomInfo.capacity}
+                        </h1>
+                        <h1 className="p-3 text-2xl font-semibold text-gray-700 uppercase bg-green-200 rounded-sm">
+                            <span>Seat Available </span>{roomInfo.seatAvailable}
+                        </h1>
+                    </div>
                 </div>
             )}
             <div className="rounded-lg shadow-sm mt-6">
-                <div className="grid grid-cols-6 w-full ">
-                    <div className=" col-span-1 sticky top-0 flex flex-col gap-2 justify-start items-start mb-6  h-[90vh] p-2 bg-white text-white">
-                        {previewUrl && (
+                <div className="flex gap-3 w-full min-w-[1440px]">
+                    <div className="sticky top-0 flex flex-col gap-2 justify-start items-start min-w-[230px] h-[100vh] p-2 bg-white text-white">
+                        <>
                             <button
-                                className={`${!showImage ? 'bg-red-400' : 'bg-green-400'
-                                    } w-full px-3 py-2 rounded-md`}
-                                onClick={() => setShowImage(!showImage)}
+                                id="add-new-object"
+                                onClick={() => handleAddObject({ ...OBJECT_NEW, id: Date.now() })}
+                                className="w-full flex gap-2 px-5 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                             >
-                                {!showImage ? (
-                                    <div className="flex items-center gap-2">
-                                        <BsEye /> <p>Hidden Diagram</p>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-2">
-                                        <BsEyeSlash /> <p>Visible Diagram</p>
-                                    </div>
-                                )}
+                                Add New Object
                             </button>
-                        )}
-                        {permission(getUser(), 'update:seat') && (
+                            <div ref={refColor} className="w-full color-picker">
+                                <SketchPicker disableAlpha color={color} onChange={(newColor) => handleColor(newColor)} />
+                            </div>
+                        </>
+                        {teams.length > 0 && (
                             <>
-                                <button
-                                    className=" w-full flex gap-2  px-5 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                                    onClick={() => handleRejecting()}
-                                >
-                                    <BiPlus />
-                                    Rejecting request
-                                </button>
-
-                                <button
-                                    onClick={() => handleApproving()}
-                                    className=" w-full  flex gap-2 px-5 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-                                >
-                                    <BiSave />
-                                    <p>Approving Diagram</p>
-                                </button>
+                                <h1 className="text-black font-bold">Teams</h1>
+                                {teams.map((team, index) => (
+                                    <div key={index} className="px-3 py-2 text-white w-full text-center" style={{ backgroundColor: team.code }}>
+                                        {team.name}
+                                    </div>
+                                ))}
                             </>
                         )}
                     </div>
 
-                    <div style={{ border: '1px solid blue' }} className="col-span-5 overflow-auto py-10">
-                        <div
-                            style={{ minWidth: ` ${Number(widthRoom)}px`, minHeight: ` ${Number(heightRoom)}px` }}
-                            className="min-w-max  h-full min-h-screen bg-gray-300 "
-                        >
-                            <div className="bg-gray-100  w-full h-full relative ">
-                                {!showImage && (
-                                    <img
-                                        src={previewUrl}
-                                        alt="diagram"
-                                        className="absolute top-0 left-0 max-w-[1440px] h-auto"
+                    <div className="bg-white overflow-auto w-full sticky top-0 h-[95vh]">
+                        <div className="flex sticky top-0 left-0 z-20 bg-white gap-3 w-full shadow-md p-3">
+                            {previewUrl && (
+                                <button
+                                    className={`${showImage ? 'bg-red-400' : 'bg-green-400'} w-fit whitespace-nowrap p-2 bg-blue-400 text-white rounded-sm flex items-center`}
+                                    onClick={() => setShowImage(!showImage)}
+                                >
+                                    {showImage ? (
+                                        <div className="flex items-center gap-2">
+                                            <BsEye /> <p>Hidden Diagram</p>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <BsEyeSlash /> <p>Visible Diagram</p>
+                                        </div>
+                                    )}
+                                </button>
+                            )}
+                            {!previewUrl ? (
+                                <div className="w-fit whitespace-nowrap p-2 bg-blue-400 text-white rounded-sm flex items-center">
+                                    <label htmlFor="fileupload" className="cursor-pointer">
+                                        Upload Background
+                                    </label>
+                                    <input
+                                        id="fileupload"
+                                        type="file"
+                                        onChange={handleFileChange}
+                                        className="mb-2 hidden"
                                     />
-                                )}
-                                {objects.length > 0 &&
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={handleRemoveBackground}
+                                    className="whitespace-nowrap p-2 bg-blue-400 text-white rounded-sm"
+                                >
+                                    <p>Remove Background</p>
+                                </button>
+                            )}
 
-                                    objects.map((object) => (
-                                        <Rnd
-                                            style={{ border: 0 }}
-                                            size={{ width: object.width, height: object.height }}
-                                            position={{ x: object.posX, y: object.posY }}
-                                        >
-                                            <div
-                                                style={{ backgroundColor: `${object.color ?? 'white'}` }}
-                                                className="relative w-full h-full outline-none"
-                                            >
-                                                <p className="w-full h-full border-0 outline-none flex items-center justify-center uppercase bg-transparent">
-                                                    {object.name}
-                                                </p>
-                                            </div>
-                                        </Rnd>
-                                    ))}
-                                {filterSeat &&
-                                    filterSeat.map((seat) => (
-                                        <Rnd
-                                            size={{ width: '40px', height: '40px' }}
-                                            position={{ x: seat.posX, y: seat.posY }}
-                                            style={{
-                                                background: seat.user ? seat.user.team.code : 'lightgray',
-                                                position: 'relative',
-                                            }}
-                                        >
-                                            <Tippy
-                                                content={
-                                                    seat?.user ? (
-                                                        <div className="bg-white shadow-md rounded-sm flex flex-col gap-2 p-3">
-                                                            <div>
-                                                                📌 <b>Name:</b> {seat?.name}
-                                                            </div>
-                                                            <div>
-                                                                📝 <b>Description:</b> {seat?.description}
-                                                            </div>
-                                                            <div>
-                                                                👤 <b>Username:</b> {seat?.user?.username}
-                                                            </div>
-                                                            <div>
-                                                                🏢 <b>Team:</b> {seat?.user?.team?.name}
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <p className="p-2 bg-white font-bold rounded-sm">UnOccupant</p>
-                                                    )
-                                                }
-                                                allowHTML={true}
-                                                placement="top"
-                                            >
-                                                <div className="relative w-10 h-10 rounded-sm shadow-md flex items-center justify-center cursor-move hover:shadow-lg">
-                                                    <p className="uppercase">   {seat?.name.split('')[0]}</p>
-                                                </div>
-                                            </Tippy>
-                                        </Rnd>
-                                    ))}
-                            </div>
+                            <>
+                                <button
+                                    disabled={loadingProcess}
+                                    onClick={handleApproving}
+                                    className="whitespace-nowrap p-2 bg-blue-400 text-white rounded-sm disabled:opacity-[0.5]"
+                                >
+                                    <p>Approving</p>
+                                </button>
+
+                                <button
+                                    disabled={loadingProcess}
+                                    onClick={handleRejecting}
+                                    className="whitespace-nowrap p-2 bg-blue-400 text-white rounded-sm disabled:opacity-[0.5]"
+                                >
+                                    <p>Reject Layout</p>
+                                </button>
+
+                            </>
+
+                        </div>
+                        <div className="grow border border-blue-500">
+                            <RoomDiagram
+                                roomId={roomId}
+                                permissionAction={permission(getUser(), 'update:seat', owner)}
+                                owner={owner}
+                                onAddSeat={handleAddSeat}
+                                showImage={showImage}
+                                diagramUrl={previewUrl}
+                                onAddObject={handleAddObject}
+                                onUpdateObject={handleUpdateObject}
+                                onDeleteObject={handleDeleteObject}
+                                onUnAssignSeat={handleUnAssignSeat}
+                                onReAssignSeat={handleReAssignSeat}
+                                onAssignSeat={handleAssignSeat}
+                                onRemoveSeat={handleRemoveSeat}
+                                onSwitchSeat={handleSwitchSeat}
+                                users={users}
+                                userNoSeat={userNoSeat}
+                                seats={seats}
+                                setSeats={setSeats}
+                                onSetSeatPosition={handleSetSeatPosition}
+                                refObject={refObject}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="sticky top-0 h-[80vh] w-full max-w-[230px] min-w-[230px] p-2 bg-white overflow-y-scroll overflow-x-visible">
+                        <div className="w-full">
+                            <SeatList
+
+                                permissionAction={permission(getUser(), 'update:seat', owner)}
+                                onAssign={handleAssignSeat}
+                                onUnAssign={handleUnAssignSeat}
+                                seats={seatType}
+                                loadingSeat={loadingSeat}
+                                users={users}
+                                seatAvailable={[]}
+                                seatAssign={seatAssign}
+                                setSeatAssign={setSeatAssign}
+                                userAssign={userAssign}
+                                setUserAssign={setUserAssign}
+                                onAdd={() => setIsOpen(true)}
+                            />
                         </div>
                     </div>
 
                 </div>
             </div>
+
+            <Popup title={'Add new Seat'} isOpen={isOpen} onClose={() => setIsOpen(false)}>
+                <div className="min-w-[500px] p-3">
+                    <form onSubmit={handleSubmit(handleCreateTypeSeat)} className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-gray-700">Name</label>
+                            <input
+                                {...register('name', { required: 'Name is required' })}
+                                className="border-0 rounded-md outline-none px-2 py-1 shadow-md text-[13px]"
+                                placeholder="Enter seat name"
+                            />
+                            {errors.name && <span className="text-red-500 text-sm">{errors.name.message}</span>}
+                        </div>
+                        <button
+                            type="submit"
+                            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                        >
+                            Create Seat
+                        </button>
+                    </form>
+                </div>
+            </Popup>
         </div>
     );
 };

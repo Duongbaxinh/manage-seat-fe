@@ -12,6 +12,8 @@ import ApprovingDiagram from './pages/ApprovingDiagram';
 import ViewDraftDiagram from './pages/ViewDiagramDraft';
 import ContainerLayout from './layout/ContainerLayout';
 import UserManagement from './pages/UserManage';
+import TeamManage from './pages/TeamManage';
+import ProjectManage from './pages/ProjectManage';
 
 function App() {
   return (
@@ -28,10 +30,26 @@ function App() {
             }
           />
           <Route
+            path="/team-management"
+            element={
+              <ContainerLayout isHeader isSidebar>
+                <TeamManage />
+              </ContainerLayout>
+            }
+          />
+          <Route
             path="/account-management"
             element={
               <ContainerLayout isHeader isSidebar>
                 <UserManagement />
+              </ContainerLayout>
+            }
+          />
+          <Route
+            path="/project-management"
+            element={
+              <ContainerLayout isHeader isSidebar>
+                <ProjectManage />
               </ContainerLayout>
             }
           />
@@ -44,7 +62,7 @@ function App() {
             }
           />
           <Route
-            path="/view-diagram/:id"
+            path="/view-diagram/:roomId"
             element={
               <ContainerLayout isHeader>
                 <ViewDraftDiagram />
@@ -52,7 +70,7 @@ function App() {
             }
           />
         </Route>
-        <Route path="/seat-management/:id" element={<SeatManagement />} />
+        <Route path="/seat-management/:roomId" element={<SeatManagement />} />
         <Route path="/error" element={<NotFound />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

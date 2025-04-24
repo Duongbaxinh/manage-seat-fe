@@ -6,11 +6,15 @@ import { PiPlus } from 'react-icons/pi';
 import { Link } from 'react-router-dom';
 import Popup from '../components/atom/Popup';
 import { DeleteIcon, EditIcon } from '../icons';
+import { handleAxiosError } from '../utils/handleError';
+import { ClipLoader } from 'react-spinners';
 
 const RoomManage = () => {
   const [rooms, setRooms] = useState([]);
   const [users, setUsers] = useState([]);
   const [halls, setHalls] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState(null);
 
@@ -22,24 +26,27 @@ const RoomManage = () => {
   } = useForm();
 
   const fetchData = async () => {
+    setLoading(true)
     const token = localStorage.getItem('accessToken');
     try {
       const [roomRes, userRes, hallRes] = await Promise.all([
-        axios.get('https://seatment-app-be-v2.onrender.com/room', {
+        axios.get('https://seatmanage-be-v3.onrender.com/room', {
           headers: { Authorization: `Bearer ${JSON.parse(token)}` },
         }),
-        axios.get('https://seatment-app-be-v2.onrender.com/user/notowner', {
+        axios.get('https://seatmanage-be-v3.onrender.com/user/notowner', {
           headers: { Authorization: `Bearer ${JSON.parse(token)}` },
         }),
-        axios.get('https://seatment-app-be-v2.onrender.com/hall', {
+        axios.get('https://seatmanage-be-v3.onrender.com/hall', {
           headers: { Authorization: `Bearer ${JSON.parse(token)}` },
         }),
       ]);
       setRooms(roomRes.data.result);
       setUsers(userRes.data.result);
       setHalls(hallRes.data.result);
+      setLoading(false)
     } catch (error) {
-      console.error('Error fetching data:', error);
+      setLoading(false)
+      handleAxiosError(error)
     }
   };
 
@@ -63,7 +70,7 @@ const RoomManage = () => {
     if (window.confirm('Bạn có chắc chắn muốn xóa?')) {
       const token = localStorage.getItem('accessToken');
       try {
-        await axios.delete(`https://seatment-app-be-v2.onrender.com/room/${id}`, {
+        await axios.delete(`https://seatmanage-be-v3.onrender.com/room/${id}`, {
           headers: { Authorization: `Bearer ${JSON.parse(token)}` },
         });
         setRooms(rooms.filter((room) => room.id !== id));
@@ -78,11 +85,11 @@ const RoomManage = () => {
 
     try {
       if (editingRoom) {
-        await axios.put(`https://seatment-app-be-v2.onrender.com/room/${editingRoom.id}`, data, {
+        await axios.put(`https://seatmanage-be-v3.onrender.com/room/${editingRoom.id}`, data, {
           headers: { Authorization: `Bearer ${JSON.parse(token)}` },
         });
       } else {
-        await axios.post('https://seatment-app-be-v2.onrender.com/room', data, {
+        await axios.post('https://seatmanage-be-v3.onrender.com/room', data, {
           headers: { Authorization: `Bearer ${JSON.parse(token)}` },
         });
       }
@@ -189,35 +196,42 @@ const RoomManage = () => {
           <thead className="bg-gray-50">
             <tr className="h-[40px]">
               <th className="text-left px-3 ">Name</th>
-              <th className="text-left px-3 ">SeatAvailable</th>
-              <th className="text-left px-3 ">Capacity</th>
+              <th className="text-left px-3 ">TotalSeat</th>
               <th className="text-left px-3 ">Owner</th>
               <th className="text-left px-3 ">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {rooms.map((room) => (
-              <tr key={room.id} className="h-[50px] border-b-[1px]">
-                <td className="px-3">{room.name}</td>
-                <td className="px-3">{room?.seats?.length ?? 0}</td>
-                <td className="px-3">{room?.capacity ?? 0}</td>
-                <td className="px-3">{room?.chief?.username ?? '-'}</td>
-                <td className="px-3">
-                  <div className="flex gap-2">
-                    <button onClick={() => handleEdit(room)}>
-                      <EditIcon className="text-blue-300" />
-                    </button>
-                    <button onClick={() => handleDelete(room.id)}>
-                      <DeleteIcon className="text-red-300" />
-                    </button>
-                    <Link to={`/seat-management/${room.id}`}>
-                      <MdAnalytics />
-                    </Link>
-                  </div>
+            {loading ? (
+              <tr>
+                <td colSpan="5" className="text-center py-10">
+                  <ClipLoader color={"#6897fd"} loading={loading} size={50} />
                 </td>
               </tr>
-            ))}
+            ) : (
+              rooms.map((room) => (
+                <tr key={room.id} className="h-[50px] border-b-[1px]">
+                  <td className="px-3">{room.name}</td>
+                  <td className="px-3">{room?.seats?.length ?? 0}</td>
+                  <td className="px-3">{room?.chief?.username ?? '-'}</td>
+                  <td className="px-3">
+                    <div className="flex gap-2">
+                      <button onClick={() => handleEdit(room)}>
+                        <EditIcon className="text-blue-300" />
+                      </button>
+                      <button onClick={() => handleDelete(room.id)}>
+                        <DeleteIcon className="text-red-300" />
+                      </button>
+                      <Link to={`/seat-management/${room.id}`}>
+                        <MdAnalytics />
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
+
         </table>
       </div>
     </div>

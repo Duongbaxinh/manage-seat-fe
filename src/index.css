@@ -6,7 +6,6 @@
 body {
   margin: 0;
   min-height: 100vh;
-  min-width: 1440px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
     'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -41,7 +40,24 @@ code {
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
+/* Ẩn phần hex và RGB */
+.sketch-picker input {
+  display: none !important;
+}
 
+/* Ẩn nhãn Hex, R, G, B */
+.sketch-picker label {
+  display: none !important;
+}
+
+/* style Datapicker */
+.react-datetime-picker__inputGroup {
+  height: 40px;
+  display: flex;
+  overflow: hidden;
+  /* justify-content: center; */
+  align-items: center;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

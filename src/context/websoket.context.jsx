@@ -12,7 +12,8 @@ export const WebSocketProvider = ({ children }) => {
         lastJsonMessage,
         readyState,
         getWebSocket } = useWebSocket(
-            "wss://seatment-app-be-v2.onrender.com/ws",
+            "wss://seatmanage-be-v3.onrender.com/ws",
+            // "https://seatmanage-be-v3.onrender.com/ws",
             {
                 shouldReconnect: () => true,
                 reconnectInterval: 3000,

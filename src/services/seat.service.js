@@ -1,13 +1,10 @@
-import axios from 'axios';
 import { useState } from 'react';
-import { handleAxiosError } from '../utils/handleError';
-import DetailRoomService from './room.service';
 import { useObjectContext } from '../context/object.context';
 import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts';
+import DetailRoomService from './room.service';
 
-const useSeat = (id) => {
-  const { users, setLoading, setSeats, fetchDataUser, getDetailRoom, setObjects } =
-    DetailRoomService(id);
+const useSeat = () => {
+  const { setSeats, setObjects } = DetailRoomService();
   const [userAssign, setUserAssign] = useState(null);
   const [seatAssign, setSeatAssign] = useState(null);
   const { objected } = useObjectContext();
@@ -22,39 +19,24 @@ const useSeat = (id) => {
     if (action === 'ctrl+shift' && type === 'keydown') setIsOX(true);
     if ((action === 'shift' || action === 'ctrl') && type === 'keyup') setIsOX(false);
   });
-  const createSeat = async (data) => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('accessToken');
-      const authentication = {
-        headers: {
-          Authorization: `Bearer ${JSON.parse(token)}`,
-        },
-      };
-
-      if (data.userId && (data.userId === null || users.length === 0)) {
-        delete data.userId;
-      }
-      await axios.post(
-        'https://seatment-app-be-v2.onrender.com/seat',
-        {
-          ...data,
-          roomId: id,
-          posX: 0,
-          posY: 0,
-        },
-        authentication
-      );
-      await getDetailRoom(authentication);
-      setLoading(false);
-      setIsOpen(false);
-    } catch (error) {
-      setLoading(false);
-      handleAxiosError(error);
-    }
-  };
 
   const handleSetSeatPosition = (seatId, position) => {
+    // await axios.post(
+    //   'https://seatmanage-be-v3.onrender.com/seat',
+    //   {
+    //     name: 'S102',
+    //     description: 'description seat 2',
+    //     typeSeat: 'TEMPORARY',
+    //     seatTypeId: '7bcca31f-4dc9-44e8-ad70-5e129c9eddd1',
+    //     roomId: '6be7f52f-3caa-47c7-8ca1-9995545f2cd0',
+    //   },
+    //   {
+    //     headers: {
+    //       Authorization:
+    //         'Bearer eyJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJ5b3VyLWFwcCIsInN1YiI6InN1cGVydXNlciIsImV4cCI6MTc0NTQxMDE1MywiaWF0IjoxNzQ1MDUwMTUzfQ.7uKdPRL2NOU_NBID6cJKlkMYkMJJkXnSD23AvHs0fkRp8A7KvRHjbL-dj7dr9PFdyt1kjaTmUQ5O46J9rIx65g',
+    //     },
+    //   }
+    // );
     setSeats((prevSeats) =>
       prevSeats.map((seat) =>
         seat.id === seatId
@@ -68,88 +50,8 @@ const useSeat = (id) => {
     );
   };
 
-  const handleResetSeat = (seatId) => {
-    setSeats((prevSeats) =>
-      prevSeats.map((seat) => (seat.id === seatId ? { ...seat, posX: 0, posY: 0 } : seat))
-    );
-  };
-
-  const handleUnassignSeat = (seatId) => {
-    setSeats((prevSeats) =>
-      prevSeats.map((seat) => {
-        if (seat.id === seatId) {
-          return {
-            ...seat,
-            posX: 0,
-            posY: 0,
-          };
-        }
-        return seat;
-      })
-    );
-  };
-
-  const handleAssign = async (seatId, userId) => {
-    const token = localStorage.getItem('accessToken');
-    await axios.put(
-      'https://seatment-app-be-v2.onrender.com/seat/assign',
-      {
-        seatId: seatId,
-        userId: userId,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${JSON.parse(token)}`,
-        },
-      }
-    );
-    fetchDataUser({
-      headers: {
-        Authorization: `Bearer ${JSON.parse(token)}`,
-      },
-    });
-  };
-
-  const handleReAssign = async (newSeatId, oldSeatId, userId) => {
-    const token = localStorage.getItem('accessToken');
-    await axios.put(
-      'https://seatment-app-be-v2.onrender.com/seat/reassign',
-      {
-        newSeatId: newSeatId,
-        oldSeatId: oldSeatId,
-        userId: userId,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${JSON.parse(token)}`,
-        },
-      }
-    );
-    fetchDataUser({
-      headers: {
-        Authorization: `Bearer ${JSON.parse(token)}`,
-      },
-    });
-  };
-
-  const handleUnAssign = async (seatId) => {
-    if (window.confirm('Are you sure unAssign?')) {
-      const token = localStorage.getItem('accessToken');
-      await axios.get(`https://seatment-app-be-v2.onrender.com/seat/unassign/${seatId}`, {
-        headers: {
-          Authorization: `Bearer ${JSON.parse(token)}`,
-        },
-      });
-      fetchDataUser({
-        headers: {
-          Authorization: `Bearer ${JSON.parse(token)}`,
-        },
-      });
-    }
-  };
-
   const handleAddObject = (newObject) => {
-    setObjects((prev) => [...prev, newObject]);
+    setObjects((prev) => [...prev, { ...newObject, id: Date.now() }]);
   };
 
   const handleUpdateObject = (objectId, updates) => {
@@ -165,7 +67,7 @@ const useSeat = (id) => {
   const handleColor = (newColor) => {
     if (!objected) return;
     setColor(newColor);
-    handleUpdateObject(objected.id, { color: newColor.hex });
+    handleUpdateObject(objected.id, { color: newColor });
   };
 
   return {
@@ -177,16 +79,10 @@ const useSeat = (id) => {
     // use set
     setColor,
     setIsOpen,
-    createSeat,
     setUserAssign,
     setSeatAssign,
     // handle seat
     handleSetSeatPosition,
-    handleResetSeat,
-    handleUnassignSeat,
-    handleAssign,
-    handleReAssign,
-    handleUnAssign,
     // handle object
     handleAddObject,
     handleDeleteObject,

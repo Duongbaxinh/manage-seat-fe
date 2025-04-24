@@ -10,12 +10,14 @@ export default function Popup({
     title,
     subName,
     position,
-    onClose
+    onClose,
+    ref
 }) {
     return (
         <div
+            ref={ref}
             onClick={() => onClose()}
-            className={`modal w-[100vw] fixed inset-0 z-30 bg-gray-950/50  transition flex justify-center items-center
+            className={`modal w-[100vw] fixed inset-0 z-30 bg-gray-400/10  transition flex justify-center items-center
                ${isOpen ? "show" : ""} ${position}
             `}>
             <div>

@@ -5,8 +5,10 @@ import { useAuth } from '../context/auth.context';
 import { useWebSocketContext } from '../context/websoket.context';
 import { handleAxiosError } from '../utils/handleError';
 import LoadingPage from './LoadingPage';
+import { useOnboardingGuide } from '../context/guide.context';
 const Login = ({ onLogin }) => {
   const { login, storeToken } = useAuth();
+  const { setIsGuideActive } = useOnboardingGuide();
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,7 +34,7 @@ const Login = ({ onLogin }) => {
 
     try {
       setLoading(true);
-      const { data } = await axios.post('https://seatment-app-be-v2.onrender.com/auth/login', {
+      const { data } = await axios.post('https://seatmanage-be-v3.onrender.com/auth/login', {
         username: email,
         password: password,
       });
@@ -51,6 +53,7 @@ const Login = ({ onLogin }) => {
         await sendMessage(
           JSON.stringify({ type: 'auth', username: user.username, role: user.role })
         );
+        setIsGuideActive(true)
         navigate(`/seat-management/${user.room}`);
         setLoading(false);
       } else {
